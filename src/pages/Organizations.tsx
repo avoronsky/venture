@@ -1,7 +1,7 @@
 import {Link} from "react-router-dom";
 import {ChevronRight, Loader2} from "lucide-react";
 import {useMyOrganizations} from "@/hooks/useOrganizations";
-import {AppHeader} from "@/components/AppHeader";
+import {AppShell} from "@/components/AppShell";
 import {Card, CardContent} from "@/components/ui/card";
 import {CreateOrganizationForm} from "@/components/CreateOrganizationForm";
 
@@ -9,8 +9,8 @@ export default function Organizations() {
     const {data: memberships = [], isLoading} = useMyOrganizations();
 
     return (
-        <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6">
-            <AppHeader title="Your organizations"/>
+        <AppShell title="Organizations" description={<span>Each organization is one company's raise, with its own pipeline and people.</span>}>
+        <div className="flex flex-col gap-6">
             <Card className="shadow-none">
                 <CardContent className="p-0">
                     {isLoading ? <div className="p-5"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/></div>
@@ -22,7 +22,7 @@ export default function Organizations() {
                                             <Link to={`/o/${org.id}`} className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-sunken">
                                                 <span className="min-w-0">
                                                     <span className="block truncate font-semibold">{org.name}</span>
-                                                    <span className="eyebrow">{role}</span>
+                                                    <span className="text-xs capitalize text-muted-foreground">{role}</span>
                                                 </span>
                                                 <ChevronRight className="h-4 w-4 text-muted-foreground"/>
                                             </Link>
@@ -39,5 +39,6 @@ export default function Organizations() {
                 </CardContent>
             </Card>
         </div>
+        </AppShell>
     );
 }

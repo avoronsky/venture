@@ -36,90 +36,103 @@
     --color-destructive-foreground: var(--destructive-foreground);
     --color-destructive-soft: var(--destructive-soft);
     --color-primary-soft: var(--primary-soft);
+    --color-highlight: var(--highlight);
+    --color-highlight-foreground: var(--highlight-foreground);
+    --color-highlight-soft: var(--highlight-soft);
     --color-sunken: var(--sunken);
     --color-termsheet: var(--termsheet);
 
-    --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    --font-display: "IBM Plex Sans Condensed", "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
-    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --font-sans: "Schibsted Grotesk Variable", "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-display: "Schibsted Grotesk Variable", "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 
+    --radius-xs: 0.25rem;
     --radius-sm: 0.375rem;
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
 }
 
-/* Mars Rovers palette: cool slate neutrals with a cobalt accent.
-   Semantic colors (success / warning / destructive) carry pipeline state. */
+/* Venture palette
+   Paper ground with a faint green cast, ink for actions, and one bold accent:
+   a highlighter yellow-green reserved for money that is committed. */
 :root {
-    --background: hsl(216 16% 94%);
-    --foreground: hsl(220 23% 10%);
-    --card: hsl(0 0% 100%);
-    --card-foreground: hsl(220 23% 10%);
-    --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(220 23% 10%);
-    --sunken: hsl(216 16% 90%);
+    --background: #f3f4f1;
+    --foreground: #191c1a;
+    --card: #ffffff;
+    --card-foreground: #191c1a;
+    --popover: #ffffff;
+    --popover-foreground: #191c1a;
+    --sunken: #eaece7;
 
-    --primary: hsl(224 64% 48%);
-    --primary-foreground: hsl(0 0% 100%);
-    --primary-soft: hsl(224 75% 93%);
-    --secondary: hsl(216 16% 90%);
-    --secondary-foreground: hsl(220 23% 10%);
-    --muted: hsl(216 16% 90%);
-    --muted-foreground: hsl(218 12% 40%);
-    --accent: hsl(216 16% 90%);
-    --accent-foreground: hsl(220 23% 10%);
+    --primary: #191c1a;
+    --primary-foreground: #ffffff;
+    --primary-soft: #e4e7e1;
+    --secondary: #eaece7;
+    --secondary-foreground: #191c1a;
+    --muted: #eaece7;
+    --muted-foreground: #626a64;
+    --accent: #eaece7;
+    --accent-foreground: #191c1a;
 
-    --success: hsl(152 61% 30%);
-    --success-foreground: hsl(0 0% 100%);
-    --success-soft: hsl(145 41% 90%);
-    --termsheet: hsl(188 45% 36%);
-    --warning: hsl(36 89% 35%);
-    --warning-foreground: hsl(0 0% 100%);
-    --warning-soft: hsl(38 74% 91%);
-    --destructive: hsl(4 62% 44%);
-    --destructive-foreground: hsl(0 0% 100%);
-    --destructive-soft: hsl(4 70% 92%);
+    --highlight: #cdf24b;
+    --highlight-foreground: #1d2700;
+    --highlight-soft: #eef8cc;
+    --termsheet: #8aae22;
 
-    --border: hsl(216 18% 85%);
-    --input: hsl(216 18% 82%);
-    --ring: hsl(224 64% 48%);
+    --success: #2f7d4f;
+    --success-foreground: #ffffff;
+    --success-soft: #e1f1e6;
+    --warning: #a35f00;
+    --warning-foreground: #ffffff;
+    --warning-soft: #fbefd9;
+    --destructive: #c23b32;
+    --destructive-foreground: #ffffff;
+    --destructive-soft: #fbe5e2;
+
+    --border: #e0e3dd;
+    --input: #d3d7d0;
+    --ring: #191c1a;
     --radius: 0.75rem;
 }
 
 .dark {
-    --background: hsl(218 24% 7%);
-    --foreground: hsl(216 16% 91%);
-    --card: hsl(218 20% 11%);
-    --card-foreground: hsl(216 16% 91%);
-    --popover: hsl(218 20% 11%);
-    --popover-foreground: hsl(216 16% 91%);
-    --sunken: hsl(218 18% 14%);
+    --background: #131614;
+    --foreground: #e8ebe6;
+    --card: #1a1e1b;
+    --card-foreground: #e8ebe6;
+    --popover: #1d211e;
+    --popover-foreground: #e8ebe6;
+    --sunken: #202521;
 
-    --primary: hsl(224 82% 72%);
-    --primary-foreground: hsl(220 30% 8%);
-    --primary-soft: hsl(224 40% 20%);
-    --secondary: hsl(218 18% 16%);
-    --secondary-foreground: hsl(216 16% 91%);
-    --muted: hsl(218 18% 16%);
-    --muted-foreground: hsl(216 9% 59%);
-    --accent: hsl(218 18% 18%);
-    --accent-foreground: hsl(216 16% 91%);
+    --primary: #eceee9;
+    --primary-foreground: #131614;
+    --primary-soft: #2a302b;
+    --secondary: #252a26;
+    --secondary-foreground: #e8ebe6;
+    --muted: #252a26;
+    --muted-foreground: #959d97;
+    --accent: #262b27;
+    --accent-foreground: #e8ebe6;
 
-    --success: hsl(150 47% 56%);
-    --success-foreground: hsl(220 30% 8%);
-    --success-soft: hsl(155 35% 14%);
-    --termsheet: hsl(186 50% 55%);
-    --warning: hsl(37 73% 59%);
-    --warning-foreground: hsl(220 30% 8%);
-    --warning-soft: hsl(38 52% 13%);
-    --destructive: hsl(4 78% 69%);
-    --destructive-foreground: hsl(220 30% 8%);
-    --destructive-soft: hsl(4 38% 17%);
+    --highlight: #c6ee47;
+    --highlight-foreground: #1a2300;
+    --highlight-soft: #2b3510;
+    --termsheet: #a6c94a;
 
-    --border: hsl(218 15% 20%);
-    --input: hsl(218 15% 24%);
-    --ring: hsl(224 82% 72%);
+    --success: #6bc78f;
+    --success-foreground: #131614;
+    --success-soft: #183022;
+    --warning: #e8a84a;
+    --warning-foreground: #131614;
+    --warning-soft: #33260f;
+    --destructive: #f07b71;
+    --destructive-foreground: #131614;
+    --destructive-soft: #3a1d1a;
+
+    --border: #2a302b;
+    --input: #343b35;
+    --ring: #eceee9;
 }
 
 @layer base {
@@ -137,31 +150,44 @@
 
     body {
         @apply bg-background text-foreground font-sans antialiased;
+        font-size: 14px;
+        line-height: 1.5;
         padding-left: env(safe-area-inset-left, 0px);
         padding-right: env(safe-area-inset-right, 0px);
     }
 
     h1, h2, h3 {
-        @apply font-display;
         text-wrap: balance;
+        letter-spacing: -0.015em;
+    }
+
+    ::selection {
+        background: var(--highlight);
+        color: var(--highlight-foreground);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
     }
 }
 
+/* Small secondary label: sentence case, never tracked caps. */
 @utility eyebrow {
-    font-family: var(--font-display);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
     color: var(--muted-foreground);
 }
 
 @utility tabular {
-    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
 }
 
-/* Hatched fill for the weighted (not yet firm) part of the raise bar */
+/* Weighted (not yet firm) money: hatched, so it never reads as committed */
 @utility hatch-primary {
-    background: repeating-linear-gradient(135deg, var(--primary) 0 4px, color-mix(in srgb, var(--primary) 45%, transparent) 4px 8px);
+    background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--foreground) 40%, transparent) 0 2px, transparent 2px 6px);
 }

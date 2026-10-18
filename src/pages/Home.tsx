@@ -1,5 +1,5 @@
 import {Navigate} from "react-router-dom";
-import {AlertCircle, Building2} from "lucide-react";
+import {AlertCircle} from "lucide-react";
 import {useAuth} from "@/hooks/useAuth";
 import {lastOrg, useMyOrganizations} from "@/hooks/useOrganizations";
 import {Button} from "@/components/ui/button";
@@ -15,7 +15,7 @@ export default function Home() {
     if (isLoading) return <FullPageSpinner/>;
     if (isError) {
         return (
-            <AuthShell>
+            <AuthShell showIntro={false}>
                 <AlertCircle className="h-8 w-8 text-destructive"/>
                 <h1 className="text-2xl font-bold">Couldn't load your organizations</h1>
                 <Button variant="outline" onClick={() => refetch()}>Try again</Button>
@@ -31,10 +31,8 @@ export default function Home() {
 
     return (
         <AuthShell>
-            <Building2 className="h-8 w-8 text-primary"/>
             <div>
-                <p className="eyebrow">Welcome</p>
-                <h1 className="text-2xl font-bold">Set up your raise</h1>
+                <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">Set up your raise</h1>
             </div>
             <p className="text-muted-foreground">
                 Create an organization for the company you're raising for. You'll be its owner and can give teammates

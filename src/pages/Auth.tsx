@@ -57,18 +57,19 @@ export default function Auth() {
 
     return (
         <AuthShell>
-            <p className="eyebrow">Venture</p>
-            <h1 className="text-3xl font-bold leading-tight">Raise Pipeline</h1>
-            <p className="text-muted-foreground">Track every investor conversation for your fundraise, with your team.</p>
+            <div>
+                <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">Sign in to Venture</h1>
+                <p className="mt-1.5 text-muted-foreground">Use your Google account, or get a one-time sign-in link by email.</p>
+            </div>
 
             {sentTo ? (
                 <div className="flex w-full gap-3 rounded-lg bg-success-soft p-4 text-success">
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0"/>
-                    <p className="text-sm">Check <span className="font-semibold">{sentTo}</span> for a sign-in link. You can close this tab.</p>
+                    <p className="text-sm">We sent a sign-in link to <span className="font-semibold">{sentTo}</span>. Open it on this device to continue.</p>
                 </div>
             ) : (
                 <div className="flex w-full flex-col gap-4">
-                    <Button type="button" variant="outline" className="w-full" onClick={onGoogle} disabled={redirecting}>
+                    <Button type="button" variant="outline" size="lg" className="w-full" onClick={onGoogle} disabled={redirecting}>
                         {redirecting ? <Loader2 className="animate-spin"/> : <GoogleMark/>}
                         Continue with Google
                     </Button>
@@ -79,11 +80,11 @@ export default function Auth() {
 
                     <form onSubmit={onEmail} className="flex flex-col gap-3">
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email">Work email</Label>
                             <Input id="email" type="email" autoComplete="email" required placeholder="you@company.com"
                                    value={email} onChange={(e) => setEmail(e.target.value)}/>
                         </div>
-                        <Button type="submit" disabled={sending}>
+                        <Button type="submit" size="lg" disabled={sending}>
                             {sending ? <Loader2 className="animate-spin"/> : <Mail/>}
                             Email me a sign-in link
                         </Button>

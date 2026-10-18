@@ -37,7 +37,7 @@ export function InvestorTable({investors, onOpen}: {investors: Investor[]; onOpe
     }), [investors, sort]);
 
     return (
-        <div className="overflow-x-auto rounded-lg border bg-card">
+        <div className="overflow-x-auto rounded-xl border bg-card">
             <Table className="min-w-[960px]">
                 <TableHeader>
                     <TableRow>

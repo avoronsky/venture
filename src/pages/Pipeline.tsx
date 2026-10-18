@@ -1,25 +1,25 @@
 import {useMemo, useRef, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import {format} from "date-fns";
-import {AlertCircle, Download, LayoutGrid, Plus, RefreshCw, Rows3, Upload} from "lucide-react";
+import {AlertCircle, Download, Plus, RefreshCw, Search, Upload} from "lucide-react";
 import {toast} from "sonner";
 import {useOrg} from "@/hooks/useOrg";
 import {useImportInvestors, useInvestors, useMoveStage, useRound} from "@/hooks/usePipeline";
-import {AppHeader} from "@/components/AppHeader";
+import {AppShell} from "@/components/AppShell";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Checkbox} from "@/components/ui/checkbox";
 import {Skeleton} from "@/components/ui/skeleton";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group";
-import {RaiseGauge} from "@/components/pipeline/RaiseGauge";
-import {NextActions} from "@/components/pipeline/NextActions";
+import {RaiseMeter} from "@/components/pipeline/RaiseMeter";
+import {FollowUps} from "@/components/pipeline/FollowUps";
 import {Board} from "@/components/pipeline/Board";
 import {InvestorTable} from "@/components/pipeline/InvestorTable";
 import {InvestorSheet} from "@/components/pipeline/InvestorSheet";
 import {RoundSheet} from "@/components/pipeline/RoundSheet";
 import {formatMoney, INVESTOR_TYPES, raiseMetrics} from "@/lib/pipeline";
 import {downloadInvestorsCSV, investorsFromCSV} from "@/lib/importExport";
+import {cn} from "@/lib/utils";
 
 type View = "board" | "table";
 
@@ -52,6 +52,7 @@ export default function Pipeline() {
     const investors = useMemo(() => investorsQ.data ?? [], [investorsQ.data]);
     const round = roundQ.data;
     const metrics = useMemo(() => raiseMetrics(investors, round?.target ?? 0), [investors, round?.target]);
+    const passedCount = investors.filter((i) => i.stage === "passed").length;
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -68,8 +69,7 @@ export default function Pipeline() {
     const openInvestor = (id: string) => navigate(`${base}/investors/${id}`);
     const closeSheet = () => navigate(base);
 
-    const changeView = (v: string) => {
-        if (v !== "board" && v !== "table") return;
+    const changeView = (v: View) => {
         setView(v);
         try {
             localStorage.setItem("venture.view", v);
@@ -86,119 +86,144 @@ export default function Pipeline() {
         importer.mutate(res.rows);
     };
 
-    const roundLine = round && [
-        round.name,
+    const roundFacts = round ? [
+        round.name ? `${round.name} round` : "",
         round.instrument,
-        round.cap ? `cap ${formatMoney(round.cap)}` : "",
-        round.close_date ? `target close ${format(new Date(round.close_date + "T00:00:00"), "MMM d, yyyy")}` : "",
-    ].filter(Boolean).join(" · ");
+        round.cap ? `${formatMoney(round.cap)} cap` : "",
+        round.close_date ? `closing ${format(new Date(round.close_date + "T00:00:00"), "MMM d, yyyy")}` : "",
+    ].filter(Boolean) : [];
 
     return (
-        <div className="mx-auto flex max-w-[1400px] flex-col gap-5 px-4 py-6 sm:px-6">
-            <AppHeader
-                title="Raise Pipeline"
-                subtitle={<>
-                    <span>{roundLine || "Round details not set"}</span>
-                    <Button variant="outline" size="sm" className="h-7 border-dashed px-2 text-xs" onClick={() => setRoundOpen(true)}>
-                        {canEdit ? "Edit round" : "Round details"}
+        <AppShell
+            wide
+            title="Pipeline"
+            description={<>
+                {roundFacts.length > 0 ? <span>{roundFacts.join(", ")}</span> : <span>No round details yet</span>}
+                <button type="button" onClick={() => setRoundOpen(true)}
+                        className="text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground">
+                    {canEdit ? (roundFacts.length ? "Edit round" : "Add round details") : "Round details"}
+                </button>
+            </>}
+            actions={<>
+                <input ref={fileInput} type="file" accept=".csv,text/csv" hidden onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) onImport(f);
+                    e.target.value = "";
+                }}/>
+                {canEdit && (
+                    <Button variant="ghost" size="sm" onClick={() => fileInput.current?.click()} disabled={importer.isPending}>
+                        <Upload/>Import
                     </Button>
-                </>}
-                actions={<>
-                    {canEdit && (
-                        <>
-                            <input ref={fileInput} type="file" accept=".csv,text/csv" hidden onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                if (f) onImport(f);
-                                e.target.value = "";
-                            }}/>
-                            <Button variant="outline" size="sm" onClick={() => fileInput.current?.click()} disabled={importer.isPending}>
-                                <Upload/>Import CSV
-                            </Button>
-                        </>
-                    )}
-                    {investors.length > 0 && (
-                        <Button variant="outline" size="sm" onClick={() => downloadInvestorsCSV(investors, org.name)}><Download/>Export CSV</Button>
-                    )}
-                    {canEdit && <Button size="sm" onClick={() => navigate(`${base}/investors/new`)}><Plus/>Add investor</Button>}
-                </>}
-            />
-
+                )}
+                {investors.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => downloadInvestorsCSV(investors, org.name)}><Download/>Export</Button>
+                )}
+                {canEdit && <Button onClick={() => navigate(`${base}/investors/new`)}><Plus/>Add investor</Button>}
+            </>}
+        >
             {investorsQ.isError ? (
-                <div className="flex flex-col items-center gap-3 rounded-lg border bg-card px-6 py-12 text-center">
-                    <AlertCircle className="h-8 w-8 text-destructive"/>
-                    <h2 className="text-xl font-semibold">Couldn't load the pipeline</h2>
+                <div className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
+                    <AlertCircle className="h-6 w-6 text-destructive"/>
+                    <h2 className="text-lg font-semibold">The pipeline didn't load</h2>
                     <p className="max-w-md text-muted-foreground">{(investorsQ.error as Error).message}</p>
                     <Button variant="outline" onClick={() => investorsQ.refetch()}><RefreshCw/>Try again</Button>
                 </div>
             ) : investorsQ.isLoading ? (
-                <div className="grid gap-3.5 lg:grid-cols-[2fr_1fr]">
-                    <Skeleton className="h-60"/>
-                    <Skeleton className="h-60"/>
-                    <Skeleton className="h-72 lg:col-span-2"/>
+                <div className="flex flex-col gap-6">
+                    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+                        <Skeleton className="h-56 rounded-xl"/>
+                        <Skeleton className="h-56 rounded-xl"/>
+                    </div>
+                    <Skeleton className="h-80 rounded-xl"/>
                 </div>
+            ) : investors.length === 0 ? (
+                <EmptyPipeline canEdit={canEdit} onAdd={() => navigate(`${base}/investors/new`)} onImport={() => fileInput.current?.click()}/>
             ) : (
-                <>
-                    <section className="grid gap-3.5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-                        <RaiseGauge metrics={metrics} investors={investors}/>
-                        <NextActions investors={investors} onOpen={openInvestor}/>
-                    </section>
+                <div className="flex flex-col gap-10">
+                    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+                        <RaiseMeter metrics={metrics} investors={investors} onSetTarget={canEdit ? () => setRoundOpen(true) : undefined}/>
+                        <FollowUps investors={investors} onOpen={openInvestor}/>
+                    </div>
 
-                    {investors.length === 0 ? (
-                        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed bg-card px-6 py-12 text-center">
-                            <h2 className="text-xl font-semibold">No investors in the pipeline yet</h2>
-                            <p className="max-w-lg text-muted-foreground">
-                                Add the funds you plan to approach, or import a CSV with columns like Fund, Partner, Stage, Type,
-                                Check min, Check max, Amount, Intro via, Next step, Next date, Notes.
-                            </p>
-                            {canEdit && (
-                                <div className="flex gap-2">
-                                    <Button onClick={() => navigate(`${base}/investors/new`)}><Plus/>Add the first investor</Button>
-                                    <Button variant="outline" onClick={() => fileInput.current?.click()}><Upload/>Import CSV</Button>
-                                </div>
+                    <section aria-label="Investors" className="flex flex-col gap-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="inline-flex rounded-lg bg-sunken p-0.5" role="tablist" aria-label="View">
+                                {(["board", "table"] as const).map((v) => (
+                                    <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => changeView(v)}
+                                            className={cn("rounded-md px-3 py-1 text-[13px] font-medium capitalize text-muted-foreground transition-colors focus-visible:outline-2 focus-visible:outline-ring",
+                                                view === v && "bg-card text-foreground shadow-[0_0_0_1px_var(--border)]")}>
+                                        {v}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="relative min-w-0 flex-[1_1_220px] sm:max-w-xs">
+                                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/>
+                                <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search investors"
+                                       placeholder="Search" className="pl-8"/>
+                            </div>
+                            <Select value={priority} onValueChange={setPriority}>
+                                <SelectTrigger className="w-auto min-w-[128px] gap-2" aria-label="Priority"><SelectValue/></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Any priority</SelectItem>
+                                    <SelectItem value="A">A, must win</SelectItem>
+                                    <SelectItem value="B">B, strong fit</SelectItem>
+                                    <SelectItem value="C">C, long shot</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={type} onValueChange={setType}>
+                                <SelectTrigger className="w-auto min-w-[120px] gap-2" aria-label="Investor type"><SelectValue/></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Any type</SelectItem>
+                                    {INVESTOR_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            {passedCount > 0 && (
+                                <label className="ml-1 flex items-center gap-2 text-[13px] text-muted-foreground">
+                                    <Checkbox checked={showPassed} onCheckedChange={(c) => setShowPassed(c === true)}/>
+                                    Show {passedCount} passed
+                                </label>
                             )}
                         </div>
-                    ) : (
-                        <>
-                            <div className="flex flex-wrap items-center gap-2.5">
-                                <ToggleGroup type="single" value={view} onValueChange={changeView} variant="outline" aria-label="View">
-                                    <ToggleGroupItem value="board" aria-label="Board view"><LayoutGrid className="h-4 w-4"/><span className="ml-1.5">Board</span></ToggleGroupItem>
-                                    <ToggleGroupItem value="table" aria-label="Table view"><Rows3 className="h-4 w-4"/><span className="ml-1.5">Table</span></ToggleGroupItem>
-                                </ToggleGroup>
-                                <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search"
-                                       placeholder="Search fund, partner, intro, notes" className="h-10 min-w-0 flex-[1_1_220px] bg-card"/>
-                                <Select value={priority} onValueChange={setPriority}>
-                                    <SelectTrigger className="h-10 w-[150px] bg-card" aria-label="Priority"><SelectValue/></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All priorities</SelectItem>
-                                        <SelectItem value="A">Priority A</SelectItem>
-                                        <SelectItem value="B">Priority B</SelectItem>
-                                        <SelectItem value="C">Priority C</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Select value={type} onValueChange={setType}>
-                                    <SelectTrigger className="h-10 w-[170px] bg-card" aria-label="Investor type"><SelectValue/></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All types</SelectItem>
-                                        {INVESTOR_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Checkbox checked={showPassed} onCheckedChange={(c) => setShowPassed(c === true)}/>
-                                    Show passed
-                                </label>
-                            </div>
 
-                            {view === "board"
-                                ? <Board investors={filtered} showPassed={showPassed} canEdit={canEdit} onOpen={openInvestor}
-                                         onMove={(id, stage) => move.mutate({id, stage})}/>
-                                : <InvestorTable investors={filtered} onOpen={openInvestor}/>}
-                        </>
-                    )}
-                </>
+                        {filtered.length === 0 ? (
+                            <p className="rounded-xl border border-dashed px-4 py-8 text-center text-muted-foreground">No investors match these filters.</p>
+                        ) : view === "board" ? (
+                            <Board investors={filtered} showPassed={showPassed} canEdit={canEdit} onOpen={openInvestor}
+                                   onMove={(id, stage) => move.mutate({id, stage})}/>
+                        ) : <InvestorTable investors={filtered} onOpen={openInvestor}/>}
+                    </section>
+                </div>
             )}
 
             <InvestorSheet open={sheetOpen && (canEdit || !isNew)} investor={selected} canEdit={canEdit} onClose={closeSheet}/>
             <RoundSheet open={roundOpen} round={round} canEdit={canEdit} onClose={() => setRoundOpen(false)}/>
+        </AppShell>
+    );
+}
+
+function EmptyPipeline({canEdit, onAdd, onImport}: {canEdit: boolean; onAdd: () => void; onImport: () => void}) {
+    return (
+        <div className="grid gap-8 rounded-2xl border bg-card p-6 sm:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="flex flex-col items-start gap-4">
+                <h2 className="text-2xl font-bold tracking-[-0.02em]">Start your investor list</h2>
+                <p className="max-w-md text-muted-foreground">
+                    Add the funds, angels and strategics you plan to talk to. Move them across stages as conversations
+                    progress, and the meter shows how much of the round is committed.
+                </p>
+                {canEdit ? (
+                    <div className="flex flex-wrap gap-2">
+                        <Button onClick={onAdd}><Plus/>Add investor</Button>
+                        <Button variant="outline" onClick={onImport}><Upload/>Import a CSV</Button>
+                    </div>
+                ) : <p className="text-sm text-muted-foreground">An editor or owner can add investors.</p>}
+            </div>
+            <div className="text-sm text-muted-foreground">
+                <p className="mb-2 font-medium text-foreground">CSV columns we recognize</p>
+                <p className="leading-relaxed">
+                    Fund or Name (required), Partner, Email, Type, Stage, Priority, Mandate, Check min, Check max, Amount,
+                    Intro via, Geo, Next step, Next date, Last contact, Notes. Stage can be free text such as "IC", "DD" or "passed".
+                </p>
+            </div>
         </div>
     );
 }

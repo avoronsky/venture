@@ -57,7 +57,7 @@ export function RoundSheet({open, round, canEdit, onClose}: RoundSheetProps) {
             <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
                 <SheetHeader className="border-b px-6 py-4 text-left">
                     <SheetTitle className="text-xl">Round details</SheetTitle>
-                    <SheetDescription>The target drives the raise gauge.</SheetDescription>
+                    <SheetDescription>The target sets the scale of the raise meter.</SheetDescription>
                 </SheetHeader>
                 <form id="round-form" onSubmit={onSubmit} className="flex-1 overflow-y-auto px-6 py-5">
                     <fieldset disabled={!canEdit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">

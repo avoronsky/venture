@@ -24,7 +24,7 @@ export function OrgRoute() {
     if (isLoading) return <FullPageSpinner/>;
     if (isError) {
         return (
-            <AuthShell>
+            <AuthShell showIntro={false}>
                 <AlertCircle className="h-8 w-8 text-destructive"/>
                 <h1 className="text-2xl font-bold">Couldn't load your organizations</h1>
                 <Button variant="outline" onClick={() => refetch()}>Try again</Button>
@@ -33,7 +33,7 @@ export function OrgRoute() {
     }
     if (!membership) {
         return (
-            <AuthShell>
+            <AuthShell showIntro={false}>
                 <ShieldOff className="h-8 w-8 text-muted-foreground"/>
                 <h1 className="text-2xl font-bold">No access to this organization</h1>
                 <p className="text-muted-foreground">

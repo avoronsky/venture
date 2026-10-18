@@ -3,7 +3,7 @@ import {AuthShell} from "@/components/AuthShell";
 
 export function SetupRequired() {
     return (
-        <AuthShell>
+        <AuthShell showIntro={false}>
             <Settings2 className="h-8 w-8 text-muted-foreground"/>
             <h1 className="text-2xl font-bold">Supabase isn't configured</h1>
             <p className="text-muted-foreground">

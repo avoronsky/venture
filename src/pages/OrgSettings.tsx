@@ -1,10 +1,10 @@
 import {type FormEvent, type ReactNode, useEffect, useState} from "react";
-import {Link, useNavigate} from "react-router-dom";
-import {ArrowLeft, Loader2, LogOut, Trash2, UserPlus} from "lucide-react";
+import {useNavigate} from "react-router-dom";
+import {Loader2, LogOut, Trash2, UserPlus} from "lucide-react";
 import {useAuth} from "@/hooks/useAuth";
 import {useOrg} from "@/hooks/useOrg";
 import {useDeleteOrganization, useMemberMutations, useMembers, useRenameOrganization} from "@/hooks/useOrganizations";
-import {AppHeader} from "@/components/AppHeader";
+import {AppShell} from "@/components/AppShell";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
@@ -55,10 +55,8 @@ export default function OrgSettings() {
     };
 
     return (
-        <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6">
-            <AppHeader title="Organization & access" subtitle={
-                <Link to={`/o/${org.id}`} className="inline-flex items-center gap-1 hover:text-foreground"><ArrowLeft className="h-3.5 w-3.5"/>Back to the pipeline</Link>
-            }/>
+        <AppShell title="People & settings" description={<span>Who can see and change the {org.name} pipeline.</span>}>
+        <div className="flex flex-col gap-6">
 
             <Card className="shadow-none">
                 <CardContent className="flex flex-col gap-3 p-5">
@@ -128,7 +126,7 @@ export default function OrgSettings() {
                                                     <Button variant="ghost" size="icon" aria-label={`Remove ${m.email}`} className="text-destructive hover:text-destructive"><Trash2/></Button>
                                                 </ConfirmButton>
                                             </span>
-                                        ) : <span className="eyebrow text-primary">{m.role}</span>}
+                                        ) : <span className="rounded-full bg-sunken px-2 py-0.5 text-xs font-medium capitalize">{m.role}</span>}
                                     </li>
                                 );
                             })}
@@ -146,7 +144,7 @@ export default function OrgSettings() {
                 </CardContent>
             </Card>
 
-            <Card className="border-destructive/40 shadow-none">
+            <Card className="border-destructive/30 shadow-none">
                 <CardContent className="flex flex-col gap-4 p-5">
                     <h2 className="text-base font-semibold">Leave or delete</h2>
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -184,6 +182,7 @@ export default function OrgSettings() {
                 </CardContent>
             </Card>
         </div>
+        </AppShell>
     );
 }
 

@@ -13,6 +13,7 @@ interface BoardProps {
 }
 
 const priorityRank = {A: 0, B: 1, C: 2};
+const isWon = (s: StageId) => s === "committed" || s === "closed";
 
 export function Board({investors, showPassed, canEdit, onOpen, onMove}: BoardProps) {
     const [over, setOver] = useState<StageId | null>(null);
@@ -28,13 +29,14 @@ export function Board({investors, showPassed, canEdit, onOpen, onMove}: BoardPro
     };
 
     return (
-        <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
-            <div className="grid min-w-min auto-cols-[minmax(232px,1fr)] grid-flow-col gap-2.5">
+        <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:-mx-8 sm:px-8">
+            <div className="grid min-w-min auto-cols-[minmax(248px,1fr)] grid-flow-col gap-4">
                 {stages.map((s) => {
                     const items = investors
                         .filter((i) => i.stage === s.id)
                         .sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority] || b.amount - a.amount);
                     const total = items.reduce((a, i) => a + i.amount, 0);
+                    const isOver = over === s.id;
                     return (
                         <section key={s.id} aria-label={s.name}
                                  onDragOver={(e) => {
@@ -46,47 +48,56 @@ export function Board({investors, showPassed, canEdit, onOpen, onMove}: BoardPro
                                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(null);
                                  }}
                                  onDrop={(e) => onDrop(e, s.id)}
-                                 className={cn("flex min-h-44 min-w-0 flex-col gap-2 rounded-lg bg-sunken p-2 transition-colors",
-                                     over === s.id && "outline-2 -outline-offset-2 outline-dashed outline-primary")}>
-                            <div className={cn("flex items-baseline justify-between border-b-2 px-1 pb-1",
-                                s.id === "committed" || s.id === "closed" ? "border-success"
-                                    : s.id === "termsheet" ? "border-termsheet"
-                                        : s.id === "passed" ? "border-destructive" : "border-border")}>
-                                <h2 className="text-[13px] font-semibold uppercase tracking-wide">{s.name}</h2>
-                                <span className="tabular text-xs text-muted-foreground">{items.length}{total ? ` · ${formatMoney(total)}` : ""}</span>
+                                 className={cn("flex min-h-56 min-w-0 flex-col gap-2 rounded-xl p-1.5 transition-colors", isOver && "bg-sunken")}>
+                            <div className="flex items-baseline justify-between gap-2 px-1.5 pb-1.5">
+                                <h2 className="flex items-center gap-2 text-[13.5px] font-semibold">
+                                    {isWon(s.id) && <span className="h-2 w-2 rounded-full bg-highlight ring-1 ring-foreground/20"/>}
+                                    {s.name}
+                                    <span className="tabular font-normal text-muted-foreground">{items.length}</span>
+                                </h2>
+                                {total > 0 && <span className="tabular text-xs text-muted-foreground">{formatMoney(total)}</span>}
                             </div>
+
                             {items.length === 0 ? (
-                                <div className="rounded-md border border-dashed px-2 py-4 text-center text-xs text-muted-foreground">
-                                    {canEdit ? "Drop an investor here" : "None"}
+                                <div className={cn("grid flex-1 place-items-center rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground",
+                                    isOver && "border-foreground/40 text-foreground")}>
+                                    {canEdit ? "Drag an investor here" : "No investors"}
                                 </div>
-                            ) : items.map((inv) => (
-                                <button key={inv.id} type="button" draggable={canEdit}
-                                        onDragStart={(e) => {
-                                            e.dataTransfer.setData("text/plain", inv.id);
-                                            e.dataTransfer.effectAllowed = "move";
-                                            setDragging(inv.id);
-                                        }}
-                                        onDragEnd={() => setDragging(null)}
-                                        onClick={() => onOpen(inv.id)}
-                                        className={cn("flex w-full flex-col gap-1.5 rounded-md border bg-card p-2.5 text-left transition-colors hover:border-muted-foreground focus-visible:outline-2 focus-visible:outline-ring",
-                                            canEdit && "cursor-grab active:cursor-grabbing",
-                                            dragging === inv.id && "opacity-40")}>
-                                    <span className="flex items-start justify-between gap-2">
-                                        <span className="min-w-0 font-semibold leading-snug [overflow-wrap:anywhere]">{inv.name}</span>
-                                        <PriorityChip priority={inv.priority}/>
-                                    </span>
-                                    {(inv.partner || inv.type) && (
-                                        <span className="truncate text-[12.5px] text-muted-foreground">{[inv.partner, inv.type].filter(Boolean).join(" · ")}</span>
-                                    )}
-                                    <span className="flex flex-wrap items-center justify-between gap-1.5">
-                                        <span className="tabular text-sm">
-                                            {inv.amount ? formatMoney(inv.amount) : checkRange(inv.check_min, inv.check_max) || <span className="font-sans text-xs text-muted-foreground">No amount</span>}
+                            ) : items.map((inv) => {
+                                const amount = inv.amount ? formatMoney(inv.amount) : checkRange(inv.check_min, inv.check_max);
+                                return (
+                                    <button key={inv.id} type="button" draggable={canEdit}
+                                            onDragStart={(e) => {
+                                                e.dataTransfer.setData("text/plain", inv.id);
+                                                e.dataTransfer.effectAllowed = "move";
+                                                setDragging(inv.id);
+                                            }}
+                                            onDragEnd={() => setDragging(null)}
+                                            onClick={() => onOpen(inv.id)}
+                                            className={cn("group flex w-full flex-col gap-2 rounded-lg border bg-card p-3 text-left transition-[border-color,box-shadow] hover:border-foreground/25 hover:shadow-[0_2px_10px_-4px_rgb(0_0_0/0.12)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                                                canEdit && "cursor-grab active:cursor-grabbing",
+                                                dragging === inv.id && "opacity-40")}>
+                                        <span className="flex items-start gap-2.5">
+                                            <PriorityChip priority={inv.priority}/>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold leading-snug [overflow-wrap:anywhere]">{inv.name}</span>
+                                                {(inv.partner || inv.type) && (
+                                                    <span className="block truncate text-[12.5px] text-muted-foreground">{inv.partner || inv.type}</span>
+                                                )}
+                                            </span>
                                         </span>
-                                        <MandateTag mandate={inv.mandate}/>
-                                    </span>
-                                    <NextChip date={inv.next_date} stage={inv.stage}/>
-                                </button>
-                            ))}
+                                        <span className="flex items-center justify-between gap-2">
+                                            {amount ? (
+                                                <span className={cn("text-[13px] font-semibold", isWon(inv.stage) && "rounded-[4px] bg-highlight px-1 text-highlight-foreground")}>
+                                                    {amount}
+                                                </span>
+                                            ) : <span className="text-xs text-muted-foreground">No amount yet</span>}
+                                            <MandateTag mandate={inv.mandate}/>
+                                        </span>
+                                        <NextChip date={inv.next_date} stage={inv.stage}/>
+                                    </button>
+                                );
+                            })}
                         </section>
                     );
                 })}
