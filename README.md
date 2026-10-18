@@ -1,6 +1,6 @@
 # Mars Rovers Raise Pipeline
 
-Investor CRM for Mars Rovers' fundraise: a stage board, a sortable table, a raise gauge against the round target, a follow-up queue, per-investor activity logs, team access control, and CSV import/export.
+Investor CRM for running a fundraise: a stage board, a sortable table, a raise gauge against the round target, a follow-up queue, per-investor activity logs, and CSV import/export. Each company raising is an **organization**; people sign in with Google or an email link, create organizations, and share access with teammates.
 
 ## Stack
 
@@ -20,30 +20,45 @@ src/
   index.css                   Tailwind v4 theme tokens (light + dark)
   components/ui/              shadcn/ui primitives
   components/pipeline/        Board, InvestorTable, InvestorSheet, RoundSheet, RaiseGauge, NextActions
-  components/                 AppHeader, ProtectedRoute, AuthShell
-  hooks/useAuth.tsx           session + member role
-  hooks/usePipeline.ts        queries, mutations, realtime invalidation
+  components/                 AppHeader (org switcher), ProtectedRoute, OrgRoute, AuthShell
+  hooks/useAuth.tsx           session, Google + email-link sign-in
+  hooks/useOrganizations.ts   my organizations, create/rename/delete, members
+  hooks/useOrg.tsx            current organization + my role in it
+  hooks/usePipeline.ts        org-scoped queries, mutations, realtime invalidation
   lib/pipeline.ts             stages, weights, money parsing, metrics (pure, unit-tested)
   lib/csv.ts, importExport.ts CSV import/export
   lib/supabase.ts, types.ts   client + row types
-  pages/                      Auth, Pipeline, Team, NotFound
+  pages/                      Auth, Home (onboarding), Organizations, Pipeline, OrgSettings, NotFound
 supabase/migrations/          schema, triggers, RLS policies, realtime publication
+supabase/scripts/             one-off maintenance SQL
 .github/workflows/            CI + GitHub Pages deploy, optional migrations
 ```
 
-Routes: `/` pipeline, `/investors/:id` pipeline with that investor open (shareable link), `/investors/new`, `/team` (owners only), `/auth`.
+Routes:
 
-## Access model
+| Path | Page |
+|------|------|
+| `/auth` | Sign in (Google or email link) |
+| `/` | Last-used organization; onboarding for a user with none |
+| `/orgs` | All my organizations, create a new one |
+| `/o/:orgId` | Pipeline |
+| `/o/:orgId/investors/:id` | Pipeline with an investor open (shareable link); `new` to add one |
+| `/o/:orgId/settings` | Organization name, people with access, leave or delete |
 
-Nobody sees anything unless their email is in the `members` table. Anyone can request a sign-in link, but row level security returns no data to an email that isn't on the list.
+## Organizations and access
 
-| Role   | Read | Change investors, activity, round | Manage members |
-|--------|------|-----------------------------------|----------------|
-| owner  | ✓    | ✓                                 | ✓              |
-| editor | ✓    | ✓                                 |                |
-| viewer | ✓    |                                   |                |
+- A new user belongs to **no** organization. The first screen asks them to create one; they become its owner.
+- Anyone signed in can create more organizations (e.g. one per company they raise for).
+- Access is per organization and by **email**. An owner adds an email with a role; when that person signs in with Google or an email link using that address, the organization appears for them. No invitation email is sent; share the app link yourself.
+- Every organization keeps at least one owner (enforced in the database). Members can leave; owners can delete the organization, which deletes its pipeline.
 
-Owners manage the list on the **Team access** page (account menu, top right).
+| Role   | Read | Change investors, activity, round | Manage access, rename, delete org |
+|--------|------|-----------------------------------|-----------------------------------|
+| owner  | ✓    | ✓                                 | ✓                                 |
+| editor | ✓    | ✓                                 |                                   |
+| viewer | ✓    |                                   |                                   |
+
+All of this is enforced with row level security, not just in the UI. Every pipeline row carries an `org_id`; investors can't be moved between organizations and activity always inherits its investor's organization.
 
 ## Pipeline stages
 
@@ -55,14 +70,18 @@ Stage moves and new investors are written to the activity log by a database trig
 ## Set up Supabase (once)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Apply the schema: open `supabase/migrations/20261018000000_pipeline.sql`, copy **the contents of the file**, paste them into **SQL Editor** and run. (Or with the CLI: `supabase link --project-ref <ref>` then `supabase db push`.) Run it once.
-3. Add yourself as the owner (SQL Editor, separate query):
-   ```sql
-   insert into public.members (email, role) values ('you@example.com', 'owner');
-   ```
-4. **Authentication → URL Configuration:** set *Site URL* to the deployed app URL (GitHub Pages: `https://avoronsky.github.io/venture/`) and add `http://localhost:8087/` to *Redirect URLs* for local development.
-5. Set up custom SMTP (**Authentication → Emails → SMTP Settings**) before inviting the team. Supabase's built-in mailer is rate-limited and meant for testing.
-6. Optional hardening: turn off *Allow new users to sign up* (**Authentication → Sign In / Providers → Email**) and invite teammates from **Authentication → Users → Invite user**. They still need a row in `members`. With signups on, strangers can create an empty account but see nothing.
+2. **Apply the schema.** Open `supabase/migrations/20261018000000_pipeline.sql`, copy **the contents of the file** (not its path), paste into **SQL Editor** and run. Run it once. (CLI alternative: `supabase link --project-ref <ref>` then `supabase db push`.)
+   - Already ran the earlier single-organization version? Run the contents of `supabase/scripts/drop_v1_single_tenant.sql` first. It deletes the old pipeline tables and their data.
+3. **URL configuration** (Authentication → URL Configuration): set *Site URL* to the deployed app (GitHub Pages: `https://avoronsky.github.io/venture/`) and add `http://localhost:8087/` to *Redirect URLs*.
+4. **Google sign-in.**
+   1. Google Cloud Console → APIs & Services → Credentials → *Create credentials* → *OAuth client ID* → type *Web application*.
+   2. *Authorized JavaScript origins*: your app origin (e.g. `https://avoronsky.github.io`) and `http://localhost:8087`.
+   3. *Authorized redirect URIs*: `https://<project-ref>.supabase.co/auth/v1/callback` (shown on the Supabase Google provider page).
+   4. Configure the OAuth consent screen (app name, support email; scopes `email`, `profile`, `openid`).
+   5. Supabase → Authentication → Sign In / Providers → **Google**: enable, paste the client ID and secret, save.
+5. **Email links.** Set up custom SMTP (Authentication → Emails → SMTP Settings) before inviting people. Supabase's built-in mailer is rate-limited and meant for testing.
+
+There is no manual first-owner step: the first person to sign in creates their organization from the app.
 
 ## Run locally
 

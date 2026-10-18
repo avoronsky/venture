@@ -10,6 +10,7 @@ import {Label} from "@/components/ui/label";
 import {useSaveRound} from "@/hooks/usePipeline";
 import {parseMoney, STAGES} from "@/lib/pipeline";
 import type {FundRound} from "@/lib/types";
+import {useOrg} from "@/hooks/useOrg";
 
 const money = z.string().trim().refine((v) => v === "" || parseMoney(v) > 0, "Use a number like 5M");
 const schema = z.object({
@@ -37,7 +38,8 @@ interface RoundSheetProps {
 }
 
 export function RoundSheet({open, round, canEdit, onClose}: RoundSheetProps) {
-    const save = useSaveRound();
+    const {org} = useOrg();
+    const save = useSaveRound(org.id);
     const {register, handleSubmit, reset, formState: {errors}} = useForm<FormValues>({resolver: zodResolver(schema), defaultValues: toForm(round)});
     useEffect(() => {
         if (open) reset(toForm(round));

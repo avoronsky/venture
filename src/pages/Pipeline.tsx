@@ -3,8 +3,8 @@ import {useNavigate, useParams} from "react-router-dom";
 import {format} from "date-fns";
 import {AlertCircle, Download, LayoutGrid, Plus, RefreshCw, Rows3, Upload} from "lucide-react";
 import {toast} from "sonner";
-import {useAuth} from "@/hooks/useAuth";
-import {useImportInvestors, useInvestors, useMoveStage, usePipelineRealtime, useRound} from "@/hooks/usePipeline";
+import {useOrg} from "@/hooks/useOrg";
+import {useImportInvestors, useInvestors, useMoveStage, useRound} from "@/hooks/usePipeline";
 import {AppHeader} from "@/components/AppHeader";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -32,14 +32,14 @@ function readView(): View {
 }
 
 export default function Pipeline() {
-    const {canEdit} = useAuth();
+    const {org, canEdit} = useOrg();
     const {investorId} = useParams();
     const navigate = useNavigate();
-    const investorsQ = useInvestors();
-    const roundQ = useRound();
-    const move = useMoveStage();
-    const importer = useImportInvestors();
-    usePipelineRealtime(true);
+    const investorsQ = useInvestors(org.id);
+    const roundQ = useRound(org.id);
+    const move = useMoveStage(org.id);
+    const importer = useImportInvestors(org.id);
+    const base = `/o/${org.id}`;
 
     const [view, setView] = useState<View>(readView);
     const [query, setQuery] = useState("");
@@ -65,8 +65,8 @@ export default function Pipeline() {
     const isNew = investorId === "new";
     const selected = investorId && !isNew ? investors.find((i) => i.id === investorId) : undefined;
     const sheetOpen = isNew || Boolean(selected);
-    const openInvestor = (id: string) => navigate(`/investors/${id}`);
-    const closeSheet = () => navigate("/");
+    const openInvestor = (id: string) => navigate(`${base}/investors/${id}`);
+    const closeSheet = () => navigate(base);
 
     const changeView = (v: string) => {
         if (v !== "board" && v !== "table") return;
@@ -117,9 +117,9 @@ export default function Pipeline() {
                         </>
                     )}
                     {investors.length > 0 && (
-                        <Button variant="outline" size="sm" onClick={() => downloadInvestorsCSV(investors)}><Download/>Export CSV</Button>
+                        <Button variant="outline" size="sm" onClick={() => downloadInvestorsCSV(investors, org.name)}><Download/>Export CSV</Button>
                     )}
-                    {canEdit && <Button size="sm" onClick={() => navigate("/investors/new")}><Plus/>Add investor</Button>}
+                    {canEdit && <Button size="sm" onClick={() => navigate(`${base}/investors/new`)}><Plus/>Add investor</Button>}
                 </>}
             />
 
@@ -152,7 +152,7 @@ export default function Pipeline() {
                             </p>
                             {canEdit && (
                                 <div className="flex gap-2">
-                                    <Button onClick={() => navigate("/investors/new")}><Plus/>Add the first investor</Button>
+                                    <Button onClick={() => navigate(`${base}/investors/new`)}><Plus/>Add the first investor</Button>
                                     <Button variant="outline" onClick={() => fileInput.current?.click()}><Upload/>Import CSV</Button>
                                 </div>
                             )}

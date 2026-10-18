@@ -27,6 +27,7 @@ import {useActivity, useDeleteInvestor, useLogActivity, useSaveInvestor} from "@
 import {INVESTOR_TYPES, MANDATES, parseMoney, PRIORITIES, STAGE_IDS, STAGES} from "@/lib/pipeline";
 import type {Investor, InvestorInput} from "@/lib/types";
 import {cn} from "@/lib/utils";
+import {useOrg} from "@/hooks/useOrg";
 
 const money = z.string().trim().refine((v) => v === "" || parseMoney(v) > 0, "Use a number like 250K or 1.5M");
 
@@ -96,8 +97,9 @@ interface InvestorSheetProps {
 
 export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetProps) {
     const isNew = !investor;
-    const save = useSaveInvestor();
-    const del = useDeleteInvestor();
+    const {org} = useOrg();
+    const save = useSaveInvestor(org.id);
+    const del = useDeleteInvestor(org.id);
     const {register, handleSubmit, control, reset, formState: {errors, isDirty}} = useForm<FormValues>({
         resolver: zodResolver(schema),
         defaultValues: toForm(investor),
@@ -252,8 +254,9 @@ function Field({label, hint, error, full, children}: {label: string; hint?: stri
 }
 
 function ActivityLog({investorId, canEdit}: {investorId: string; canEdit: boolean}) {
-    const {data = [], isLoading} = useActivity(investorId);
-    const log = useLogActivity();
+    const {org} = useOrg();
+    const {data = [], isLoading} = useActivity(org.id, investorId);
+    const log = useLogActivity(org.id);
     const [text, setText] = useState("");
 
     const submit = async () => {

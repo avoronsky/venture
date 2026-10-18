@@ -6,13 +6,16 @@ import {Toaster} from "@/components/ui/sonner";
 import {TooltipProvider} from "@/components/ui/tooltip";
 import {AuthProvider} from "@/hooks/useAuth";
 import {ProtectedRoute} from "@/components/ProtectedRoute";
+import {OrgRoute} from "@/components/OrgRoute";
 import {FullPageSpinner} from "@/components/FullPageSpinner";
 import {SetupRequired} from "@/pages/SetupRequired";
 import {isSupabaseConfigured} from "@/lib/supabase";
 
 const Auth = lazy(() => import("@/pages/Auth"));
+const Home = lazy(() => import("@/pages/Home"));
+const Organizations = lazy(() => import("@/pages/Organizations"));
 const Pipeline = lazy(() => import("@/pages/Pipeline"));
-const Team = lazy(() => import("@/pages/Team"));
+const OrgSettings = lazy(() => import("@/pages/OrgSettings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -31,10 +34,15 @@ function App() {
                             <Suspense fallback={<FullPageSpinner/>}>
                                 <Routes>
                                     <Route path="/auth" element={<Auth/>}/>
-                                    <Route path="/" element={<ProtectedRoute><Pipeline/></ProtectedRoute>}/>
-                                    <Route path="/investors/:investorId" element={<ProtectedRoute><Pipeline/></ProtectedRoute>}/>
-                                    <Route path="/team" element={<ProtectedRoute ownerOnly><Team/></ProtectedRoute>}/>
-                                    <Route path="/pipeline" element={<Navigate to="/" replace/>}/>
+                                    {/* Last-used organization, or onboarding for a user with none */}
+                                    <Route path="/" element={<ProtectedRoute><Home/></ProtectedRoute>}/>
+                                    <Route path="/orgs" element={<ProtectedRoute><Organizations/></ProtectedRoute>}/>
+                                    <Route path="/o/:orgId" element={<ProtectedRoute><OrgRoute/></ProtectedRoute>}>
+                                        <Route index element={<Pipeline/>}/>
+                                        <Route path="investors/:investorId" element={<Pipeline/>}/>
+                                        <Route path="settings" element={<OrgSettings/>}/>
+                                    </Route>
+                                    <Route path="/o" element={<Navigate to="/orgs" replace/>}/>
                                     <Route path="*" element={<NotFound/>}/>
                                 </Routes>
                             </Suspense>

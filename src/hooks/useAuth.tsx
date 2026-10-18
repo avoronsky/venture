@@ -1,17 +1,14 @@
-import {createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState} from "react";
+import {createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState} from "react";
 import type {Session} from "@supabase/supabase-js";
 import {appBaseUrl, supabase} from "@/lib/supabase";
-import type {Role} from "@/lib/types";
 
 interface AuthContextValue {
     session: Session | null;
+    /** Lower-cased verified email; memberships are matched on it. */
     email: string | null;
-    /** null = signed in but not on the member list. */
-    role: Role | null;
     loading: boolean;
-    canEdit: boolean;
-    isOwner: boolean;
     sendSignInLink: (email: string) => Promise<{error: string | null}>;
+    signInWithGoogle: () => Promise<{error: string | null}>;
     signOut: () => Promise<void>;
 }
 
@@ -19,29 +16,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({children}: {children: ReactNode}) {
     const [session, setSession] = useState<Session | null>(null);
-    const [role, setRole] = useState<Role | null>(null);
     const [loading, setLoading] = useState(true);
-    const userId = useRef<string | null | undefined>(undefined);
 
     useEffect(() => {
-        const {data} = supabase.auth.onAuthStateChange((event, next) => {
-            const uid = next?.user.id ?? null;
+        const {data} = supabase.auth.onAuthStateChange((_event, next) => {
             setSession(next);
-            // Token refreshes keep the same user; only re-check the role when the user changes.
-            if (uid === userId.current && event !== "SIGNED_OUT") return;
-            userId.current = uid;
-            if (!next) {
-                setRole(null);
-                setLoading(false);
-                return;
-            }
-            setLoading(true);
-            // Defer: calling Supabase inside the auth callback can deadlock the client.
-            setTimeout(async () => {
-                const {data: r, error} = await supabase.rpc("member_role");
-                setRole(error ? null : ((r as Role | null) ?? null));
-                setLoading(false);
-            }, 0);
+            setLoading(false);
         });
         return () => data.subscription.unsubscribe();
     }, []);
@@ -52,20 +32,31 @@ export function AuthProvider({children}: {children: ReactNode}) {
         return {error: /rate/i.test(error.message) ? "Too many requests. Wait a minute and try again." : error.message};
     }, []);
 
+    const signInWithGoogle = useCallback(async () => {
+        const {error} = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: {redirectTo: appBaseUrl(), queryParams: {prompt: "select_account"}},
+        });
+        if (!error) return {error: null};
+        return {
+            error: /provider is not enabled|Unsupported provider/i.test(error.message)
+                ? "Google sign-in isn't enabled for this project yet. Use the email link for now."
+                : error.message,
+        };
+    }, []);
+
     const signOut = useCallback(async () => {
         await supabase.auth.signOut();
     }, []);
 
     const value = useMemo<AuthContextValue>(() => ({
         session,
-        email: session?.user.email ?? null,
-        role,
+        email: session?.user.email?.toLowerCase() ?? null,
         loading,
-        canEdit: role === "owner" || role === "editor",
-        isOwner: role === "owner",
         sendSignInLink,
+        signInWithGoogle,
         signOut,
-    }), [session, role, loading, sendSignInLink, signOut]);
+    }), [session, loading, sendSignInLink, signInWithGoogle, signOut]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

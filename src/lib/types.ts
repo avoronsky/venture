@@ -2,8 +2,29 @@ import type {Mandate, Priority, StageId} from "./pipeline";
 
 export type Role = "owner" | "editor" | "viewer";
 
+export interface Organization {
+    id: string;
+    name: string;
+    created_at: string;
+}
+
+/** An organization the signed-in user belongs to, with their role in it. */
+export interface Membership {
+    org: Organization;
+    role: Role;
+}
+
+export interface Member {
+    org_id: string;
+    email: string;
+    role: Role;
+    invited_by: string | null;
+    added_at: string;
+}
+
 export interface Investor {
     id: string;
+    org_id: string;
     name: string;
     partner: string;
     email: string;
@@ -26,10 +47,11 @@ export interface Investor {
     updated_at: string;
 }
 
-export type InvestorInput = Omit<Investor, "id" | "created_by" | "created_at" | "updated_at">;
+export type InvestorInput = Omit<Investor, "id" | "org_id" | "created_by" | "created_at" | "updated_at">;
 
 export interface Activity {
     id: number;
+    org_id: string;
     investor_id: string;
     kind: "note" | "stage" | "system";
     body: string;
@@ -39,7 +61,7 @@ export interface Activity {
 }
 
 export interface FundRound {
-    id: true;
+    org_id: string;
     name: string;
     target: number;
     instrument: string;
@@ -48,10 +70,4 @@ export interface FundRound {
     updated_at: string;
 }
 
-export type FundRoundInput = Omit<FundRound, "id" | "updated_at">;
-
-export interface Member {
-    email: string;
-    role: Role;
-    added_at: string;
-}
+export type FundRoundInput = Omit<FundRound, "org_id" | "updated_at">;
