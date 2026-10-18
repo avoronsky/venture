@@ -6,7 +6,7 @@ import {Card, CardContent} from "@/components/ui/card";
 import {CreateOrganizationForm} from "@/components/CreateOrganizationForm";
 
 export default function Organizations() {
-    const {data: memberships = [], isLoading} = useMyOrganizations();
+    const {data: memberships = [], isPending: isLoading} = useMyOrganizations();
 
     return (
         <AppShell title="Organizations" description={<span>Each organization is one company's raise, with its own pipeline and people.</span>}>

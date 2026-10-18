@@ -32,6 +32,9 @@ export function useMyOrganizations() {
     return useQuery({
         queryKey: orgKeys.mine(email),
         enabled: Boolean(email),
+        // Always ask the database on arrival: a stale empty list would send an existing user to onboarding.
+        staleTime: 0,
+        refetchOnMount: "always",
         queryFn: async (): Promise<Membership[]> => {
             const {data, error} = await supabase
                 .from("organization_members")

@@ -13,7 +13,7 @@ import {FullPageSpinner} from "@/components/FullPageSpinner";
 export function OrgRoute() {
     const {orgId} = useParams();
     const {email, signOut} = useAuth();
-    const {data: memberships, isLoading, isError, refetch} = useMyOrganizations();
+    const {data: memberships, isPending, isFetching, isError, refetch} = useMyOrganizations();
     const membership = memberships?.find((m) => m.org.id === orgId);
     usePipelineRealtime(membership?.org.id);
 
@@ -21,7 +21,9 @@ export function OrgRoute() {
         if (membership) rememberOrg(membership.org.id);
     }, [membership]);
 
-    if (isLoading) return <FullPageSpinner/>;
+    const found = memberships?.some((m) => m.org.id === orgId);
+    // Wait for a definite answer before showing "no access" (e.g. right after being added).
+    if (isPending || (!found && isFetching)) return <FullPageSpinner/>;
     if (isError) {
         return (
             <AuthShell showIntro={false}>

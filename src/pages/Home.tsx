@@ -10,9 +10,11 @@ import {CreateOrganizationForm} from "@/components/CreateOrganizationForm";
 /** Sends the user to their last organization; a new user creates their first one here. */
 export default function Home() {
     const {email, signOut} = useAuth();
-    const {data: memberships, isLoading, isError, refetch} = useMyOrganizations();
+    const {data: memberships, isPending, isFetching, isError, refetch} = useMyOrganizations();
 
-    if (isLoading) return <FullPageSpinner/>;
+    // isPending covers "not started yet" as well as "loading"; never decide from missing data.
+    // isFetching covers a cached empty list that is being re-checked.
+    if (isPending || (isFetching && memberships?.length === 0)) return <FullPageSpinner/>;
     if (isError) {
         return (
             <AuthShell showIntro={false}>
