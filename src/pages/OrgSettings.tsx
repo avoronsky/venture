@@ -83,7 +83,7 @@ export default function OrgSettings() {
                     <div>
                         <h2 className="text-base font-semibold">People with access</h2>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Access is by email. People sign in with Google or an email link using the address listed here,
+                            Access is by email. People sign in with the Google account for the address listed here,
                             and the organization appears for them right away. Send them the app link yourself; no email is sent.
                         </p>
                     </div>

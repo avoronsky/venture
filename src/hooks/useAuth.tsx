@@ -7,7 +7,6 @@ interface AuthContextValue {
     /** Lower-cased verified email; memberships are matched on it. */
     email: string | null;
     loading: boolean;
-    sendSignInLink: (email: string) => Promise<{error: string | null}>;
     signInWithGoogle: () => Promise<{error: string | null}>;
     signOut: () => Promise<void>;
 }
@@ -26,12 +25,6 @@ export function AuthProvider({children}: {children: ReactNode}) {
         return () => data.subscription.unsubscribe();
     }, []);
 
-    const sendSignInLink = useCallback(async (email: string) => {
-        const {error} = await supabase.auth.signInWithOtp({email, options: {emailRedirectTo: appBaseUrl()}});
-        if (!error) return {error: null};
-        return {error: /rate/i.test(error.message) ? "Too many requests. Wait a minute and try again." : error.message};
-    }, []);
-
     const signInWithGoogle = useCallback(async () => {
         const {error} = await supabase.auth.signInWithOAuth({
             provider: "google",
@@ -40,7 +33,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
         if (!error) return {error: null};
         return {
             error: /provider is not enabled|Unsupported provider/i.test(error.message)
-                ? "Google sign-in isn't enabled for this project yet. Use the email link for now."
+                ? "Google sign-in isn't enabled in Supabase yet. Turn on the Google provider, then try again."
                 : error.message,
         };
     }, []);
@@ -53,10 +46,9 @@ export function AuthProvider({children}: {children: ReactNode}) {
         session,
         email: session?.user.email?.toLowerCase() ?? null,
         loading,
-        sendSignInLink,
         signInWithGoogle,
         signOut,
-    }), [session, loading, sendSignInLink, signInWithGoogle, signOut]);
+    }), [session, loading, signInWithGoogle, signOut]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

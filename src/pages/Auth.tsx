@@ -1,11 +1,8 @@
-import {type FormEvent, useState} from "react";
+import {useState} from "react";
 import {Navigate, useLocation} from "react-router-dom";
-import {CheckCircle2, Loader2, Mail} from "lucide-react";
+import {Loader2} from "lucide-react";
 import {useAuth} from "@/hooks/useAuth";
 import {Button} from "@/components/ui/button";
-import {Input} from "@/components/ui/input";
-import {Label} from "@/components/ui/label";
-import {Separator} from "@/components/ui/separator";
 import {AuthShell} from "@/components/AuthShell";
 import {FullPageSpinner} from "@/components/FullPageSpinner";
 
@@ -21,12 +18,9 @@ function GoogleMark() {
 }
 
 export default function Auth() {
-    const {session, loading, sendSignInLink, signInWithGoogle} = useAuth();
+    const {session, loading, signInWithGoogle} = useAuth();
     const location = useLocation();
-    const [email, setEmail] = useState("");
-    const [sending, setSending] = useState(false);
     const [redirecting, setRedirecting] = useState(false);
-    const [sentTo, setSentTo] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     if (loading) return <FullPageSpinner/>;
@@ -34,16 +28,6 @@ export default function Auth() {
         const from = (location.state as {from?: string} | null)?.from;
         return <Navigate to={from && from !== "/auth" ? from : "/"} replace/>;
     }
-
-    const onEmail = async (e: FormEvent) => {
-        e.preventDefault();
-        setSending(true);
-        setError(null);
-        const {error: err} = await sendSignInLink(email.trim());
-        setSending(false);
-        if (err) setError(err);
-        else setSentTo(email.trim());
-    };
 
     const onGoogle = async () => {
         setRedirecting(true);
@@ -59,38 +43,12 @@ export default function Auth() {
         <AuthShell>
             <div>
                 <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">Sign in to Venture</h1>
-                <p className="mt-1.5 text-muted-foreground">Use your Google account, or get a one-time sign-in link by email.</p>
+                <p className="mt-1.5 text-muted-foreground">Sign in with your Google account. If a teammate gave you access, use the address they added.</p>
             </div>
-
-            {sentTo ? (
-                <div className="flex w-full gap-3 rounded-lg bg-success-soft p-4 text-success">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0"/>
-                    <p className="text-sm">We sent a sign-in link to <span className="font-semibold">{sentTo}</span>. Open it on this device to continue.</p>
-                </div>
-            ) : (
-                <div className="flex w-full flex-col gap-4">
-                    <Button type="button" variant="outline" size="lg" className="w-full" onClick={onGoogle} disabled={redirecting}>
-                        {redirecting ? <Loader2 className="animate-spin"/> : <GoogleMark/>}
-                        Continue with Google
-                    </Button>
-
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <Separator className="flex-1"/>or<Separator className="flex-1"/>
-                    </div>
-
-                    <form onSubmit={onEmail} className="flex flex-col gap-3">
-                        <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="email">Work email</Label>
-                            <Input id="email" type="email" autoComplete="email" required placeholder="you@company.com"
-                                   value={email} onChange={(e) => setEmail(e.target.value)}/>
-                        </div>
-                        <Button type="submit" size="lg" disabled={sending}>
-                            {sending ? <Loader2 className="animate-spin"/> : <Mail/>}
-                            Email me a sign-in link
-                        </Button>
-                    </form>
-                </div>
-            )}
+            <Button type="button" variant="outline" size="lg" className="w-full" onClick={onGoogle} disabled={redirecting}>
+                {redirecting ? <Loader2 className="animate-spin"/> : <GoogleMark/>}
+                Continue with Google
+            </Button>
             {error && <p className="w-full rounded-md bg-destructive-soft px-3 py-2 text-sm text-destructive">{error}</p>}
         </AuthShell>
     );

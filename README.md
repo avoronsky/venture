@@ -1,6 +1,6 @@
 # Mars Rovers Raise Pipeline
 
-Investor CRM for running a fundraise: a stage board, a sortable table, a raise gauge against the round target, a follow-up queue, per-investor activity logs, and CSV import/export. Each company raising is an **organization**; people sign in with Google or an email link, create organizations, and share access with teammates.
+Investor CRM for running a fundraise: a stage board, a sortable table, a raise gauge against the round target, a follow-up queue, per-investor activity logs, and CSV import/export. Each company raising is an **organization**; people sign in with Google, create organizations, and share access with teammates.
 
 ## Stack
 
@@ -21,7 +21,7 @@ src/
   components/ui/              shadcn/ui primitives
   components/pipeline/        Board, InvestorTable, InvestorSheet, RoundSheet, RaiseGauge, NextActions
   components/                 AppHeader (org switcher), ProtectedRoute, OrgRoute, AuthShell
-  hooks/useAuth.tsx           session, Google + email-link sign-in
+  hooks/useAuth.tsx           session, Google sign-in
   hooks/useOrganizations.ts   my organizations, create/rename/delete, members
   hooks/useOrg.tsx            current organization + my role in it
   hooks/usePipeline.ts        org-scoped queries, mutations, realtime invalidation
@@ -38,7 +38,7 @@ Routes:
 
 | Path | Page |
 |------|------|
-| `/auth` | Sign in (Google or email link) |
+| `/auth` | Sign in with Google |
 | `/` | Last-used organization; onboarding for a user with none |
 | `/orgs` | All my organizations, create a new one |
 | `/o/:orgId` | Pipeline |
@@ -49,7 +49,7 @@ Routes:
 
 - A new user belongs to **no** organization. The first screen asks them to create one; they become its owner.
 - Anyone signed in can create more organizations (e.g. one per company they raise for).
-- Access is per organization and by **email**. An owner adds an email with a role; when that person signs in with Google or an email link using that address, the organization appears for them. No invitation email is sent; share the app link yourself.
+- Access is per organization and by **email**. An owner adds an email with a role; when that person signs in with the Google account for that address, the organization appears for them. No invitation email is sent; share the app link yourself.
 - Every organization keeps at least one owner (enforced in the database). Members can leave; owners can delete the organization, which deletes its pipeline.
 
 | Role   | Read | Change investors, activity, round | Manage access, rename, delete org |
@@ -79,7 +79,7 @@ Stage moves and new investors are written to the activity log by a database trig
    3. *Authorized redirect URIs*: `https://<project-ref>.supabase.co/auth/v1/callback` (shown on the Supabase Google provider page).
    4. Configure the OAuth consent screen (app name, support email; scopes `email`, `profile`, `openid`).
    5. Supabase → Authentication → Sign In / Providers → **Google**: enable, paste the client ID and secret, save.
-5. **Email links.** Set up custom SMTP (Authentication → Emails → SMTP Settings) before inviting people. Supabase's built-in mailer is rate-limited and meant for testing.
+5. **Turn off email sign-in.** The app only offers Google. In Authentication → Sign In / Providers → Email, disable the Email provider so nobody can request sign-in links directly against the API.
 
 There is no manual first-owner step: the first person to sign in creates their organization from the app.
 
