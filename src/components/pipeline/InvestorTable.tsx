@@ -4,10 +4,10 @@ import {ArrowDown, ArrowUp} from "lucide-react";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {cn} from "@/lib/utils";
 import {checkRange, formatMoney, STAGES} from "@/lib/pipeline";
-import type {Investor} from "@/lib/types";
-import {MandateTag, NextChip, PriorityChip, StagePill} from "./badges";
+import type {CommentStats, Investor} from "@/lib/types";
+import {CommentCount, MandateTag, NextChip, PriorityChip, StagePill} from "./badges";
 
-type SortKey = "name" | "stage" | "priority" | "type" | "amount" | "check" | "mandate" | "via" | "next_date" | "last_contact";
+type SortKey = "name" | "stage" | "priority" | "type" | "amount" | "check" | "mandate" | "via" | "next_date" | "last_contact" | "comments";
 
 const COLUMNS: {key: SortKey; label: string; numeric?: boolean}[] = [
     {key: "name", label: "Investor"},
@@ -20,21 +20,23 @@ const COLUMNS: {key: SortKey; label: string; numeric?: boolean}[] = [
     {key: "via", label: "Intro via"},
     {key: "next_date", label: "Next step"},
     {key: "last_contact", label: "Last touch"},
+    {key: "comments", label: "Comments"},
 ];
 
-function sortValue(r: Investor, k: SortKey): string | number {
+function sortValue(r: Investor, k: SortKey, stats?: Map<string, CommentStats>): string | number {
+    if (k === "comments") return stats?.get(r.id)?.last_comment_on ?? "";
     if (k === "stage") return STAGES.findIndex((s) => s.id === r.stage);
     if (k === "amount") return r.amount;
     if (k === "check") return r.check_max || r.check_min;
     return String(r[k] ?? "").toLowerCase() || "￿";
 }
 
-export function InvestorTable({investors, onOpen}: {investors: Investor[]; onOpen: (id: string) => void}) {
+export function InvestorTable({investors, onOpen, commentStats}: {investors: Investor[]; onOpen: (id: string) => void; commentStats?: Map<string, CommentStats>}) {
     const [sort, setSort] = useState<{key: SortKey; dir: 1 | -1}>({key: "stage", dir: 1});
     const rows = useMemo(() => [...investors].sort((a, b) => {
-        const x = sortValue(a, sort.key), y = sortValue(b, sort.key);
+        const x = sortValue(a, sort.key, commentStats), y = sortValue(b, sort.key, commentStats);
         return (x < y ? -1 : x > y ? 1 : 0) * sort.dir;
-    }), [investors, sort]);
+    }), [investors, sort, commentStats]);
 
     return (
         <div className="overflow-x-auto rounded-xl border bg-card">
@@ -74,6 +76,7 @@ export function InvestorTable({investors, onOpen}: {investors: Investor[]; onOpe
                                 <NextChip date={r.next_date} stage={r.stage}/>
                             </TableCell>
                             <TableCell className="tabular align-top">{r.last_contact ? format(new Date(r.last_contact + "T00:00:00"), "MMM d") : ""}</TableCell>
+                            <TableCell className="align-top"><CommentCount stats={commentStats?.get(r.id)}/></TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

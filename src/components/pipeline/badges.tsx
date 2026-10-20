@@ -1,4 +1,7 @@
 import {format} from "date-fns";
+import {MessageSquare} from "lucide-react";
+import {shortDate} from "@/lib/comments";
+import type {CommentStats} from "@/lib/types";
 import {cn} from "@/lib/utils";
 import {daysUntil, type Mandate, MANDATES, type Priority, STAGE_BY_ID, type StageId} from "@/lib/pipeline";
 
@@ -54,6 +57,18 @@ export function NextChip({date, stage}: {date: string | null; stage: StageId}) {
         <span className={cn("tabular inline-flex items-center gap-1 whitespace-nowrap text-xs",
             d < 0 ? "font-medium text-destructive" : d <= 2 ? "font-medium text-warning" : "text-muted-foreground")}>
             {label}
+        </span>
+    );
+}
+
+/** Comment count and the date of the latest comment, e.g. "3, latest Oct 18". */
+export function CommentCount({stats}: {stats: CommentStats | undefined}) {
+    if (!stats || stats.comment_count === 0) return null;
+    return (
+        <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground"
+              title={`${stats.comment_count} comment${stats.comment_count === 1 ? "" : "s"}`}>
+            <MessageSquare className="h-3.5 w-3.5"/>
+            <span><span className="tabular">{stats.comment_count}</span>{stats.last_comment_on && `, latest ${shortDate(stats.last_comment_on)}`}</span>
         </span>
     );
 }

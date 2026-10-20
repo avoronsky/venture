@@ -67,10 +67,26 @@ The weighted pipeline multiplies each investor's expected amount by the stage we
 
 Stage moves and new investors are written to the activity log by a database trigger, so history is consistent no matter which client made the change.
 
+## Comments
+
+Each investor has a **Comments** tab: a dated timeline of notes from calls, emails and meetings.
+
+- A comment's date is the day it happened. It defaults to today and can be set to an earlier day; a backdated comment shows when it was actually written.
+- Comments record their author. Stage changes appear in the same timeline (they can be hidden) and show who made them.
+- Editors and owners can comment. You can edit your own comments; edits are marked. The author or an owner can delete a comment. Stage history can't be deleted.
+- Adding a comment moves the investor's "last touch" date forward when the comment is newer.
+- Board cards and the table show how many comments an investor has and the date of the latest one.
+
+All of this is enforced in the database (`supabase/migrations/20261020000000_investor_comments.sql`).
+
 ## Set up Supabase (once)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. **Apply the schema.** Open `supabase/migrations/20261018000000_pipeline.sql`, copy **the contents of the file** (not its path), paste into **SQL Editor** and run. Run it once. (CLI alternative: `supabase link --project-ref <ref>` then `supabase db push`.)
+2. **Apply the schema.** Run each file in `supabase/migrations/` in name order: open it, copy **the contents of the file** (not its path), paste into **SQL Editor** and run.
+   1. `20261018000000_pipeline.sql`: tables, access rules, realtime. Run once.
+   2. `20261020000000_investor_comments.sql`: dated comments. Safe to run again.
+
+   (CLI alternative: `supabase link --project-ref <ref>` then `supabase db push`, which applies whatever hasn't run yet.)
    - Already ran the earlier single-organization version? Run the contents of `supabase/scripts/drop_v1_single_tenant.sql` first. It deletes the old pipeline tables and their data.
 3. **URL configuration** (Authentication → URL Configuration): set *Site URL* to the deployed app (GitHub Pages: `https://avoronsky.github.io/venture/`) and add `http://localhost:8087/` to *Redirect URLs*.
 4. **Google sign-in.**

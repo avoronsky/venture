@@ -4,7 +4,7 @@ import {format} from "date-fns";
 import {AlertCircle, Download, Plus, RefreshCw, Search, Upload} from "lucide-react";
 import {toast} from "sonner";
 import {useOrg} from "@/hooks/useOrg";
-import {useImportInvestors, useInvestors, useMoveStage, useRound} from "@/hooks/usePipeline";
+import {useCommentStats, useImportInvestors, useInvestors, useMoveStage, useRound} from "@/hooks/usePipeline";
 import {AppShell} from "@/components/AppShell";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -38,6 +38,7 @@ export default function Pipeline() {
     const investorsQ = useInvestors(org.id);
     const roundQ = useRound(org.id);
     const move = useMoveStage(org.id);
+    const {data: commentStats} = useCommentStats(org.id);
     const importer = useImportInvestors(org.id);
     const base = `/o/${org.id}`;
 
@@ -188,9 +189,9 @@ export default function Pipeline() {
                         {filtered.length === 0 ? (
                             <p className="rounded-xl border border-dashed px-4 py-8 text-center text-muted-foreground">No investors match these filters.</p>
                         ) : view === "board" ? (
-                            <Board investors={filtered} showPassed={showPassed} canEdit={canEdit} onOpen={openInvestor}
+                            <Board investors={filtered} showPassed={showPassed} canEdit={canEdit} onOpen={openInvestor} commentStats={commentStats}
                                    onMove={(id, stage) => move.mutate({id, stage})}/>
-                        ) : <InvestorTable investors={filtered} onOpen={openInvestor}/>}
+                        ) : <InvestorTable investors={filtered} onOpen={openInvestor} commentStats={commentStats}/>}
                     </section>
                 </div>
             )}

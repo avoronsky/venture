@@ -55,9 +55,19 @@ export interface Activity {
     investor_id: string;
     kind: "note" | "stage" | "system";
     body: string;
+    /** The day it happened, chosen by the author (defaults to the day it was written). */
     occurred_on: string;
+    /** Who wrote it, or who caused a stage change. Null for history recorded before comments existed. */
+    author_email: string | null;
+    edited_at: string | null;
     created_by: string | null;
     created_at: string;
+}
+
+export interface CommentStats {
+    investor_id: string;
+    comment_count: number;
+    last_comment_on: string | null;
 }
 
 export interface FundRound {

@@ -2,14 +2,15 @@ import {useEffect} from "react";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {toast} from "sonner";
 import {errorMessage, supabase} from "@/lib/supabase";
-import {STAGE_BY_ID, type StageId, todayISO} from "@/lib/pipeline";
-import type {Activity, FundRound, FundRoundInput, Investor, InvestorInput} from "@/lib/types";
+import {STAGE_BY_ID, type StageId} from "@/lib/pipeline";
+import type {Activity, CommentStats, FundRound, FundRoundInput, Investor, InvestorInput} from "@/lib/types";
 
 // Every key starts with the org id so switching organizations never shows another org's cache.
 export const keys = {
     investors: (orgId: string) => [orgId, "investors"] as const,
     round: (orgId: string) => [orgId, "round"] as const,
     activity: (orgId: string, investorId: string) => [orgId, "activity", investorId] as const,
+    commentStats: (orgId: string) => [orgId, "comment-stats"] as const,
 };
 
 /* ---------- queries ---------- */
@@ -53,6 +54,21 @@ export function useActivity(orgId: string, investorId: string | undefined) {
     });
 }
 
+/** Comment count and latest comment date per investor, for the board and table. */
+export function useCommentStats(orgId: string) {
+    return useQuery({
+        queryKey: keys.commentStats(orgId),
+        queryFn: async (): Promise<Map<string, CommentStats>> => {
+            const {data, error} = await supabase
+                .from("investor_comment_stats")
+                .select("investor_id, comment_count, last_comment_on")
+                .eq("org_id", orgId);
+            if (error) throw error;
+            return new Map((data ?? []).map((r) => [r.investor_id, r as CommentStats]));
+        },
+    });
+}
+
 /** Live updates for one organization: invalidate its cached queries when anyone changes data. */
 export function usePipelineRealtime(orgId: string | undefined) {
     const qc = useQueryClient();
@@ -65,9 +81,10 @@ export function usePipelineRealtime(orgId: string | undefined) {
                 qc.invalidateQueries({queryKey: keys.investors(orgId)}))
             .on("postgres_changes", {event: "*", schema: "public", table: "fund_round", filter}, () =>
                 qc.invalidateQueries({queryKey: keys.round(orgId)}))
-            .on("postgres_changes", {event: "INSERT", schema: "public", table: "investor_activity", filter}, (p) => {
-                const id = (p.new as Partial<Activity>).investor_id;
+            .on("postgres_changes", {event: "*", schema: "public", table: "investor_activity", filter}, (p) => {
+                const id = (p.new as Partial<Activity>)?.investor_id ?? (p.old as Partial<Activity>)?.investor_id;
                 if (id) qc.invalidateQueries({queryKey: keys.activity(orgId, id)});
+                qc.invalidateQueries({queryKey: keys.commentStats(orgId)});
             })
             .on("postgres_changes", {event: "*", schema: "public", table: "organization_members", filter}, () => {
                 qc.invalidateQueries({queryKey: ["members", orgId]});
@@ -163,20 +180,60 @@ export function useImportInvestors(orgId: string) {
     });
 }
 
-export function useLogActivity(orgId: string) {
+function useCommentRefresh(orgId: string) {
     const qc = useQueryClient();
+    return (investorId: string) => {
+        qc.invalidateQueries({queryKey: keys.activity(orgId, investorId)});
+        qc.invalidateQueries({queryKey: keys.commentStats(orgId)});
+        qc.invalidateQueries({queryKey: keys.investors(orgId)}); // "last touch" moves with dated comments
+    };
+}
+
+export function useAddComment(orgId: string) {
+    const refresh = useCommentRefresh(orgId);
     return useMutation({
-        mutationFn: async ({investorId, body}: {investorId: string; body: string}) => {
-            // org_id is set server-side from the investor; sent here only to satisfy the column.
-            const {error} = await supabase.from("investor_activity").insert({org_id: orgId, investor_id: investorId, body});
+        mutationFn: async ({investorId, body, occurredOn}: {investorId: string; body: string; occurredOn: string}) => {
+            // org_id and the author are set by the database; org_id is sent only because the column is required.
+            const {error} = await supabase.from("investor_activity")
+                .insert({org_id: orgId, investor_id: investorId, kind: "note", body, occurred_on: occurredOn});
             if (error) throw error;
-            const {error: e2} = await supabase.from("investors").update({last_contact: todayISO()}).eq("id", investorId).eq("org_id", orgId);
-            if (e2) throw e2;
         },
         onSuccess: (_d, {investorId}) => {
-            toast.success("Logged");
-            qc.invalidateQueries({queryKey: keys.activity(orgId, investorId)});
-            qc.invalidateQueries({queryKey: keys.investors(orgId)});
+            toast.success("Comment added");
+            refresh(investorId);
+        },
+        onError,
+    });
+}
+
+export function useUpdateComment(orgId: string) {
+    const refresh = useCommentRefresh(orgId);
+    return useMutation({
+        mutationFn: async ({id, body, occurredOn}: {id: number; investorId: string; body: string; occurredOn: string}) => {
+            const {data, error} = await supabase.from("investor_activity")
+                .update({body, occurred_on: occurredOn}).eq("id", id).select("id");
+            if (error) throw error;
+            if (!data?.length) throw new Error("You can only edit your own comments.");
+        },
+        onSuccess: (_d, {investorId}) => {
+            toast.success("Comment updated");
+            refresh(investorId);
+        },
+        onError,
+    });
+}
+
+export function useDeleteComment(orgId: string) {
+    const refresh = useCommentRefresh(orgId);
+    return useMutation({
+        mutationFn: async ({id}: {id: number; investorId: string}) => {
+            const {data, error} = await supabase.from("investor_activity").delete().eq("id", id).select("id");
+            if (error) throw error;
+            if (!data?.length) throw new Error("Only the author or an owner can delete this comment.");
+        },
+        onSuccess: (_d, {investorId}) => {
+            toast.success("Comment deleted");
+            refresh(investorId);
         },
         onError,
     });

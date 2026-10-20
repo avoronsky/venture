@@ -2,7 +2,6 @@ import {type ReactNode, useEffect, useState} from "react";
 import {Controller, useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {z} from "zod";
-import {format} from "date-fns";
 import {Loader2, Trash2} from "lucide-react";
 import {Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle} from "@/components/ui/sheet";
 import {Button} from "@/components/ui/button";
@@ -11,7 +10,6 @@ import {Label} from "@/components/ui/label";
 import {Textarea} from "@/components/ui/textarea";
 import {Checkbox} from "@/components/ui/checkbox";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {Separator} from "@/components/ui/separator";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -23,7 +21,8 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {useActivity, useDeleteInvestor, useLogActivity, useSaveInvestor} from "@/hooks/usePipeline";
+import {useCommentStats, useDeleteInvestor, useSaveInvestor} from "@/hooks/usePipeline";
+import {InvestorComments} from "./InvestorComments";
 import {INVESTOR_TYPES, MANDATES, parseMoney, PRIORITIES, STAGE_IDS, STAGES} from "@/lib/pipeline";
 import type {Investor, InvestorInput} from "@/lib/types";
 import {cn} from "@/lib/utils";
@@ -100,6 +99,10 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
     const {org} = useOrg();
     const save = useSaveInvestor(org.id);
     const del = useDeleteInvestor(org.id);
+    const {data: stats} = useCommentStats(org.id);
+    const commentCount = investor ? stats?.get(investor.id)?.comment_count ?? 0 : 0;
+    const [tab, setTab] = useState<"comments" | "details">("comments");
+    const showing = isNew ? "details" : tab;
     const {register, handleSubmit, control, reset, formState: {errors, isDirty}} = useForm<FormValues>({
         resolver: zodResolver(schema),
         defaultValues: toForm(investor),
@@ -108,6 +111,7 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
     // Reset when switching investors; keep in-progress edits when the same record refreshes in the background.
     useEffect(() => {
         reset(toForm(investor));
+        setTab("comments");
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [investor?.id, open, reset]);
 
@@ -120,13 +124,37 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
 
     return (
         <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-            <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+            <SheetContent className="flex w-full flex-col gap-0 p-0 outline-none sm:max-w-xl"
+                          // Existing investors open on the comments timeline; don't drop focus (and a focus ring) on the first tab.
+                          onOpenAutoFocus={(e) => {
+                              if (!isNew) e.preventDefault();
+                          }}>
                 <SheetHeader className="border-b px-6 py-4 text-left">
                     <SheetTitle className="text-xl [overflow-wrap:anywhere]">{isNew ? "Add investor" : investor.name}</SheetTitle>
                     <SheetDescription>{isNew ? "Add a fund, angel or strategic to the pipeline." : `${investor.type || "Investor"}, ${STAGES.find((s) => s.id === investor.stage)?.name.toLowerCase()}`}</SheetDescription>
+                    {!isNew && (
+                        <div className="-mb-4 mt-3 flex gap-5" role="tablist" aria-label="Investor">
+                            {([["comments", "Comments"], ["details", "Details"]] as const).map(([value, label]) => (
+                                <button key={value} type="button" role="tab" aria-selected={showing === value} onClick={() => setTab(value)}
+                                        className={cn("-mb-px flex items-center gap-1.5 border-b-2 pb-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring",
+                                            showing === value ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
+                                    {label}
+                                    {value === "comments" && commentCount > 0 && (
+                                        <span className="rounded-full bg-foreground/10 px-1.5 text-xs tabular">{commentCount}</span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </SheetHeader>
 
-                <form id="investor-form" onSubmit={onSubmit} className="flex-1 overflow-y-auto px-6 py-5">
+                {showing === "comments" && investor && (
+                    <div className="flex-1 overflow-y-auto px-6 py-5">
+                        <InvestorComments investorId={investor.id}/>
+                    </div>
+                )}
+
+                <form id="investor-form" onSubmit={onSubmit} hidden={showing !== "details"} className="flex-1 overflow-y-auto px-6 py-5">
                     <fieldset disabled={!canEdit} className="flex flex-col gap-6">
                         <Section title="Investor">
                             <Field label="Fund / investor" error={errors.name?.message} full>
@@ -188,14 +216,13 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
                             <Field label="What happens next" full><Input {...register("next_step")} placeholder="Send data room access"/></Field>
                             <Field label="Due"><Input type="date" {...register("next_date")}/></Field>
                             <Field label="Last touch"><Input type="date" {...register("last_contact")}/></Field>
-                            <Field label="Notes" full><Textarea rows={4} {...register("notes")}/></Field>
+                            <Field label="Notes" hint="Standing notes about this investor. Use Comments for dated updates." full><Textarea rows={4} {...register("notes")}/></Field>
                         </Section>
                     </fieldset>
 
-                    {!isNew && <ActivityLog investorId={investor.id} canEdit={canEdit}/>}
                 </form>
 
-                <SheetFooter className="flex-row items-center justify-between gap-2 border-t px-6 py-3 sm:justify-between">
+                <SheetFooter hidden={showing !== "details"} className="flex-row items-center justify-between gap-2 border-t px-6 py-3 sm:justify-between">
                     {!isNew && canEdit ? (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -204,7 +231,7 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
                             <AlertDialogContent>
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Delete {investor.name}?</AlertDialogTitle>
-                                    <AlertDialogDescription>This removes the investor and its activity log for everyone. It can't be undone.</AlertDialogDescription>
+                                    <AlertDialogDescription>This removes the investor and all of its comments for everyone. It can't be undone.</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>Keep</AlertDialogCancel>
@@ -250,52 +277,5 @@ function Field({label, hint, error, full, children}: {label: string; hint?: stri
             {children}
             {error ? <p className="text-xs text-destructive">{error}</p> : hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
         </div>
-    );
-}
-
-function ActivityLog({investorId, canEdit}: {investorId: string; canEdit: boolean}) {
-    const {org} = useOrg();
-    const {data = [], isLoading} = useActivity(org.id, investorId);
-    const log = useLogActivity(org.id);
-    const [text, setText] = useState("");
-
-    const submit = async () => {
-        const body = text.trim();
-        if (!body) return;
-        await log.mutateAsync({investorId, body});
-        setText("");
-    };
-
-    return (
-        <section className="mt-6 flex flex-col gap-3">
-            <Separator/>
-            <h3 className="text-sm font-semibold">Activity</h3>
-            {canEdit && (
-                <div className="flex gap-2">
-                    <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Log a call, meeting, email…"
-                           onKeyDown={(e) => {
-                               if (e.key === "Enter") {
-                                   e.preventDefault();
-                                   submit();
-                               }
-                           }}/>
-                    <Button type="button" variant="outline" onClick={submit} disabled={log.isPending || !text.trim()}>Log</Button>
-                </div>
-            )}
-            {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p>
-                : data.length === 0 ? <p className="text-sm text-muted-foreground">No activity logged yet.</p>
-                    : (
-                        <ol className="ml-1 flex flex-col gap-2 border-l-2 pl-4">
-                            {data.map((a) => (
-                                <li key={a.id} className="relative text-sm">
-                                    <span className={cn("absolute -left-[22px] top-1.5 h-2 w-2 rounded-full ring-2 ring-background",
-                                        a.kind === "stage" ? "bg-primary" : a.kind === "system" ? "bg-muted-foreground" : "bg-foreground")}/>
-                                    <span className="tabular mr-2 text-xs text-muted-foreground">{format(new Date(a.occurred_on + "T00:00:00"), "MMM d")}</span>
-                                    {a.body}
-                                </li>
-                            ))}
-                        </ol>
-                    )}
-        </section>
     );
 }

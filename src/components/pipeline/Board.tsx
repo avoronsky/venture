@@ -1,8 +1,8 @@
 import {type DragEvent, useState} from "react";
 import {cn} from "@/lib/utils";
 import {checkRange, formatMoney, STAGES, type StageId} from "@/lib/pipeline";
-import type {Investor} from "@/lib/types";
-import {MandateTag, NextChip, PriorityChip} from "./badges";
+import type {CommentStats, Investor} from "@/lib/types";
+import {CommentCount, MandateTag, NextChip, PriorityChip} from "./badges";
 
 interface BoardProps {
     investors: Investor[];
@@ -10,12 +10,13 @@ interface BoardProps {
     canEdit: boolean;
     onOpen: (id: string) => void;
     onMove: (id: string, stage: StageId) => void;
+    commentStats?: Map<string, CommentStats>;
 }
 
 const priorityRank = {A: 0, B: 1, C: 2};
 const isWon = (s: StageId) => s === "committed" || s === "closed";
 
-export function Board({investors, showPassed, canEdit, onOpen, onMove}: BoardProps) {
+export function Board({investors, showPassed, canEdit, onOpen, onMove, commentStats}: BoardProps) {
     const [over, setOver] = useState<StageId | null>(null);
     const [dragging, setDragging] = useState<string | null>(null);
     const stages = STAGES.filter((s) => s.id !== "passed" || showPassed);
@@ -94,7 +95,12 @@ export function Board({investors, showPassed, canEdit, onOpen, onMove}: BoardPro
                                             ) : <span className="text-xs text-muted-foreground">No amount yet</span>}
                                             <MandateTag mandate={inv.mandate}/>
                                         </span>
-                                        <NextChip date={inv.next_date} stage={inv.stage}/>
+                                        {(inv.next_date || commentStats?.get(inv.id)) && (
+                                            <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                                                <NextChip date={inv.next_date} stage={inv.stage}/>
+                                                <CommentCount stats={commentStats?.get(inv.id)}/>
+                                            </span>
+                                        )}
                                     </button>
                                 );
                             })}
