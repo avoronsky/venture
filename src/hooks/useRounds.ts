@@ -61,6 +61,7 @@ export function useCreateRound(orgId: string) {
             toast.success(`${name} created`);
             await qc.invalidateQueries({queryKey: roundKeys.list(orgId)});
             qc.invalidateQueries({queryKey: [orgId, "investors"]});
+            qc.invalidateQueries({queryKey: ["me"]}); // copied investors are saved to your database too
         },
         onError: (e) => toast.error(errorMessage(e)),
     });

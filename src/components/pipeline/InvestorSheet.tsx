@@ -23,8 +23,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import {useCommentStats, useDeleteInvestor, useSaveInvestor} from "@/hooks/usePipeline";
 import {InvestorComments} from "./InvestorComments";
+import {DatabaseNameInput} from "./DatabaseNameInput";
 import {INVESTOR_TYPES, MANDATES, parseMoney, PRIORITIES, STAGE_IDS, STAGES} from "@/lib/pipeline";
-import type {Investor, InvestorInput} from "@/lib/types";
+import type {Investor, InvestorInput, MyInvestor} from "@/lib/types";
 import {cn} from "@/lib/utils";
 import {useOrg} from "@/hooks/useOrg";
 import {useCurrentRound} from "@/hooks/useCurrentRound";
@@ -105,7 +106,7 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
     const commentCount = investor ? stats?.get(investor.id)?.comment_count ?? 0 : 0;
     const [tab, setTab] = useState<"comments" | "details">("comments");
     const showing = isNew ? "details" : tab;
-    const {register, handleSubmit, control, reset, formState: {errors, isDirty}} = useForm<FormValues>({
+    const {register, handleSubmit, control, reset, setValue, watch, formState: {errors, isDirty}} = useForm<FormValues>({
         resolver: zodResolver(schema),
         defaultValues: toForm(investor),
     });
@@ -114,6 +115,7 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
     useEffect(() => {
         reset(toForm(investor));
         setTab("comments");
+        setFilledFrom(null);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [investor?.id, open, reset]);
 
@@ -122,7 +124,18 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
         onClose();
     });
 
-    const types = investor?.type && !INVESTOR_TYPES.includes(investor.type) ? [...INVESTOR_TYPES, investor.type] : INVESTOR_TYPES;
+    const typeValue = watch("type");
+    const types = typeValue && !INVESTOR_TYPES.includes(typeValue) ? [...INVESTOR_TYPES, typeValue] : INVESTOR_TYPES;
+    const [filledFrom, setFilledFrom] = useState<string | null>(null);
+    const fillFromDatabase = (m: MyInvestor) => {
+        const opts = {shouldDirty: true, shouldValidate: true};
+        setValue("name", m.name, opts);
+        setValue("type", m.type || "VC", opts);
+        if (m.contact_name) setValue("partner", m.contact_name, opts);
+        if (m.contact_email) setValue("email", m.contact_email, opts);
+        if (m.min_check) setValue("check_min", String(m.min_check), opts);
+        setFilledFrom(m.name);
+    };
 
     return (
         <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -159,8 +172,13 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
                 <form id="investor-form" onSubmit={onSubmit} hidden={showing !== "details"} className="flex-1 overflow-y-auto px-6 py-5">
                     <fieldset disabled={!canEdit} className="flex flex-col gap-6">
                         <Section title="Investor">
-                            <Field label="Fund / investor" error={errors.name?.message} full>
-                                <Input {...register("name")} placeholder="e.g. Fund name" autoFocus={isNew}/>
+                            <Field label="Fund / investor" error={errors.name?.message}
+                                   hint={isNew ? (filledFrom ? `Filled in from your investor database (${filledFrom}).` : "Start typing to pick from your investor database. New names are saved there too.") : undefined}
+                                   full>
+                                {isNew ? (
+                                    <DatabaseNameInput {...register("name")} value={watch("name")} onPick={fillFromDatabase}
+                                                       placeholder="e.g. Fund name" autoFocus/>
+                                ) : <Input {...register("name")} placeholder="e.g. Fund name"/>}
                             </Field>
                             <Field label="Partner / contact"><Input {...register("partner")}/></Field>
                             <Field label="Email" error={errors.email?.message}><Input type="email" {...register("email")}/></Field>

@@ -1,5 +1,14 @@
 // Pure helpers for the investor comment timeline. No app imports so they can be unit-tested with plain Node.
-import type {Activity} from "./types";
+/** Anything that can appear in a dated timeline: comments, and for pipelines, stage history. */
+export interface TimelineEntry {
+    id: string | number;
+    kind: "note" | "stage" | "system";
+    body: string;
+    occurred_on: string;
+    created_at: string;
+    edited_at: string | null;
+    author_email?: string | null;
+}
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -38,22 +47,22 @@ export function authorLabel(email: string | null | undefined, me: string | null 
     return email.split("@")[0];
 }
 
-export interface TimelineDay {
+export interface TimelineDay<T extends TimelineEntry = TimelineEntry> {
     date: string;
-    entries: Activity[];
+    entries: T[];
 }
 
 /**
  * Newest day first. Within a day, newest written first. Comments carry the date the user chose,
  * so a note backdated to last week sorts under last week.
  */
-export function groupTimeline(entries: Activity[], {includeHistory = true} = {}): TimelineDay[] {
+export function groupTimeline<T extends TimelineEntry>(entries: T[], {includeHistory = true} = {}): TimelineDay<T>[] {
     const visible = includeHistory ? entries : entries.filter((e) => e.kind === "note");
     const sorted = [...visible].sort((a, b) =>
         a.occurred_on === b.occurred_on
             ? b.created_at.localeCompare(a.created_at)
             : b.occurred_on.localeCompare(a.occurred_on));
-    const days: TimelineDay[] = [];
+    const days: TimelineDay<T>[] = [];
     for (const entry of sorted) {
         const last = days[days.length - 1];
         if (last && last.date === entry.occurred_on) last.entries.push(entry);
@@ -63,10 +72,10 @@ export function groupTimeline(entries: Activity[], {includeHistory = true} = {})
 }
 
 /** True when a comment was written on a different day than the one it's dated to. */
-export function writtenOnOtherDay(entry: Pick<Activity, "occurred_on" | "created_at">): boolean {
+export function writtenOnOtherDay(entry: Pick<TimelineEntry, "occurred_on" | "created_at">): boolean {
     return isoOf(new Date(entry.created_at)) !== entry.occurred_on;
 }
 
-export function writtenOn(entry: Pick<Activity, "created_at">): string {
+export function writtenOn(entry: Pick<TimelineEntry, "created_at">): string {
     return isoOf(new Date(entry.created_at));
 }

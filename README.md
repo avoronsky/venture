@@ -46,6 +46,7 @@ Routes:
 | `/o/:orgId` | Opens the last-used round, or offers to create the first one |
 | `/o/:orgId/r/:roundId` | Pipeline for one round |
 | `/o/:orgId/r/:roundId/investors/:id` | Pipeline with an investor open (shareable link); `new` to add one |
+| `/investors`, `/investors/:id` | Your private investor database |
 | `/o/:orgId/settings` | Organization name, people with access, leave or delete |
 
 ## Organizations and access
@@ -69,6 +70,15 @@ Target → Contacted → First meeting → Diligence → Partner / IC → Term s
 The weighted pipeline multiplies each investor's expected amount by the stage weight (2%, 5%, 10%, 25%, 45%, 75%, 95%, 100%). Weights live in `STAGES` in `src/lib/pipeline.ts`.
 
 Stage moves and new investors are written to the activity log by a database trigger, so history is consistent no matter which client made the change.
+
+## Investor database
+
+Every user has a private **Investor database** (sidebar tab, `/investors`): investor name, type, website, contact person and email, minimum check, and dated comments. Nobody else can see it, including teammates and organization owners; it's enforced in the database.
+
+- **Adding to a pipeline** (Add investor in any round): start typing the name and pick a match from your database to fill in type, contact, email and minimum check.
+- **Saved automatically**: whenever you add an investor to a pipeline (or a new round copies investors), it's saved to *your* database if it isn't there yet (matched by name, ignoring case). Teammates' databases aren't touched.
+- Comments in the database are separate from a pipeline's comments: database notes are your own long-term notes on the investor; pipeline comments are shared with the team and belong to one round.
+- Removing an investor from your database doesn't remove it from any pipeline.
 
 ## Rounds
 
@@ -98,6 +108,7 @@ All of this is enforced in the database (`supabase/migrations/20261020000000_inv
    1. `20261018000000_pipeline.sql`: tables, access rules, realtime. Run once.
    2. `20261020000000_investor_comments.sql`: dated comments. Safe to run again.
    3. `20261022000000_rounds.sql`: multiple rounds per organization. Your current round settings become the first round and every existing investor (with comments) moves into it. Safe to run again.
+   4. `20261022100000_investor_database.sql`: each user's private investor database. Investors people already added to pipelines are copied into their databases. Safe to run again.
 
    (CLI alternative: `supabase link --project-ref <ref>` then `supabase db push`, which applies whatever hasn't run yet.)
    - Already ran the earlier single-organization version? Run the contents of `supabase/scripts/drop_v1_single_tenant.sql` first. It deletes the old pipeline tables and their data.

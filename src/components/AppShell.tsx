@@ -1,13 +1,13 @@
 import {type ReactNode, useState} from "react";
 import {Link, NavLink, useLocation} from "react-router-dom";
 import {useTheme} from "next-themes";
-import {Check, ChevronsUpDown, Columns3, LogOut, Menu, Monitor, Moon, Plus, Sun, Users} from "lucide-react";
+import {BookUser, Check, ChevronsUpDown, Columns3, LogOut, Menu, Monitor, Moon, Plus, Sun, Users} from "lucide-react";
 import {useRounds} from "@/hooks/useRounds";
 import {useOptionalRound} from "@/hooks/useCurrentRound";
 import {NewRoundForm} from "@/components/pipeline/NewRoundForm";
 import {useAuth} from "@/hooks/useAuth";
-import {useOptionalOrg} from "@/hooks/useOrg";
-import {useMyOrganizations} from "@/hooks/useOrganizations";
+import {type OrgContextValue, OrgProvider, useOptionalOrg} from "@/hooks/useOrg";
+import {lastOrg, useMyOrganizations} from "@/hooks/useOrganizations";
 import {Button} from "@/components/ui/button";
 import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle} from "@/components/ui/sheet";
 import {
@@ -19,6 +19,19 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {cn} from "@/lib/utils";
+
+/**
+ * The organization the sidebar shows. Inside /o/:orgId it's that organization; on pages that aren't
+ * about one organization (your investor database, the organizations list) it's the one you used last.
+ */
+function useNavOrg(): OrgContextValue | null {
+    const inRoute = useOptionalOrg();
+    const {data: memberships = []} = useMyOrganizations();
+    if (inRoute) return inRoute;
+    const m = memberships.find((x) => x.org.id === lastOrg()) ?? memberships[0];
+    if (!m) return null;
+    return {org: m.org, role: m.role, canEdit: m.role === "owner" || m.role === "editor", isOwner: m.role === "owner"};
+}
 
 interface AppShellProps {
     title: string;
@@ -34,7 +47,7 @@ export function AppShell({title, description, actions, children, wide = false}: 
     const [menuOpen, setMenuOpen] = useState(false);
     const [newRoundOpen, setNewRoundOpen] = useState(false);
     const location = useLocation();
-    const current = useOptionalOrg();
+    const current = useNavOrg();
     const currentRound = useOptionalRound();
     const {data: rounds = []} = useRounds(current?.org.id);
     const openNewRound = () => {
@@ -62,6 +75,7 @@ export function AppShell({title, description, actions, children, wide = false}: 
             </Sheet>
 
             {current && (
+                <OrgProvider value={current}>
                 <Sheet open={newRoundOpen} onOpenChange={setNewRoundOpen}>
                     <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
                         <SheetHeader className="border-b px-6 py-4 text-left">
@@ -75,6 +89,7 @@ export function AppShell({title, description, actions, children, wide = false}: 
                         </div>
                     </SheetContent>
                 </Sheet>
+                </OrgProvider>
             )}
 
             <main className={cn("mx-auto w-full px-4 pb-16 pt-6 sm:px-8 lg:pt-9", wide ? "max-w-[1480px]" : "max-w-[880px]")}>
@@ -105,7 +120,7 @@ function Brand({label}: {label: string}) {
 
 function SidebarContents({onNavigate, onNewRound}: {onNavigate?: () => void; onNewRound: () => void}) {
     const {email, signOut} = useAuth();
-    const current = useOptionalOrg();
+    const current = useNavOrg();
     const {data: memberships = []} = useMyOrganizations();
     const {data: rounds = []} = useRounds(current?.org.id);
     const {theme, setTheme} = useTheme();
@@ -184,6 +199,12 @@ function SidebarContents({onNavigate, onNewRound}: {onNavigate?: () => void; onN
                     <NavLink to="/orgs" className={navItem} onClick={onNavigate}><Columns3 className="h-4 w-4"/>Organizations</NavLink>
                 </nav>
             )}
+
+            <nav className="flex flex-col gap-0.5 border-t pt-4" aria-label="Your investors">
+                <NavLink to="/investors" className={navItem} onClick={onNavigate}>
+                    <BookUser className="h-4 w-4"/>Investor database
+                </NavLink>
+            </nav>
 
             <div className="mt-auto flex flex-col gap-3 border-t pt-4">
                 <div className="flex rounded-md bg-sunken p-0.5" role="radiogroup" aria-label="Theme">

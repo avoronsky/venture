@@ -105,6 +105,7 @@ export function useSaveInvestor(orgId: string, roundId: string) {
         },
         onSuccess: (inv, {id}) => {
             toast.success(id ? "Saved" : `${inv.name} added`);
+            if (!id) qc.invalidateQueries({queryKey: ["me"]}); // the server also saved it to your investor database
             qc.invalidateQueries({queryKey: keys.investors(orgId)});
             qc.invalidateQueries({queryKey: keys.activity(orgId, inv.id)});
         },

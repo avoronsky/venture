@@ -17,6 +17,7 @@ const Home = lazy(() => import("@/pages/Home"));
 const Organizations = lazy(() => import("@/pages/Organizations"));
 const Pipeline = lazy(() => import("@/pages/Pipeline"));
 const OrgSettings = lazy(() => import("@/pages/OrgSettings"));
+const InvestorDatabase = lazy(() => import("@/pages/InvestorDatabase"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -38,6 +39,9 @@ function App() {
                                     {/* Last-used organization, or onboarding for a user with none */}
                                     <Route path="/" element={<ProtectedRoute><Home/></ProtectedRoute>}/>
                                     <Route path="/orgs" element={<ProtectedRoute><Organizations/></ProtectedRoute>}/>
+                                    {/* Each user's private investor database */}
+                                    <Route path="/investors" element={<ProtectedRoute><InvestorDatabase/></ProtectedRoute>}/>
+                                    <Route path="/investors/:investorId" element={<ProtectedRoute><InvestorDatabase/></ProtectedRoute>}/>
                                     <Route path="/o/:orgId" element={<ProtectedRoute><OrgRoute/></ProtectedRoute>}>
                                         {/* Last-used round, or "create your first round" */}
                                         <Route index element={<RoundIndex/>}/>

@@ -88,3 +88,28 @@ export interface Round {
 }
 
 export type RoundInput = Pick<Round, "name" | "status" | "target" | "instrument" | "cap" | "close_date">;
+
+/** An entry in the signed-in user's private investor database. */
+export interface MyInvestor {
+    id: string;
+    name: string;
+    type: string;
+    website: string;
+    contact_name: string;
+    contact_email: string;
+    min_check: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export type MyInvestorInput = Pick<MyInvestor, "name" | "type" | "website" | "contact_name" | "contact_email" | "min_check">;
+
+export interface MyInvestorComment {
+    id: number;
+    investor_id: string;
+    kind: "note";
+    body: string;
+    occurred_on: string;
+    created_at: string;
+    edited_at: string | null;
+}
