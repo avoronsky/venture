@@ -163,7 +163,7 @@ export default function OrgSettings() {
                     {isOwner && (
                         <div className="flex flex-col gap-2 border-t pt-4">
                             <p className="text-sm text-muted-foreground">
-                                Deleting removes every investor, activity log and the round for everyone. It can't be undone.
+                                Deleting removes every round, investor and comment for everyone. It can't be undone.
                                 Type <span className="font-semibold text-foreground">{org.name}</span> to confirm.
                             </p>
                             <div className="flex flex-wrap gap-2">

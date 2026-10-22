@@ -3,36 +3,26 @@ import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {toast} from "sonner";
 import {errorMessage, supabase} from "@/lib/supabase";
 import {STAGE_BY_ID, type StageId} from "@/lib/pipeline";
-import type {Activity, CommentStats, FundRound, FundRoundInput, Investor, InvestorInput} from "@/lib/types";
+import type {Activity, CommentStats, Investor, InvestorInput} from "@/lib/types";
+import {roundKeys} from "@/hooks/useRounds";
 
 // Every key starts with the org id so switching organizations never shows another org's cache.
 export const keys = {
-    investors: (orgId: string) => [orgId, "investors"] as const,
-    round: (orgId: string) => [orgId, "round"] as const,
+    /** Without a round id this is the prefix for every round's investor list. */
+    investors: (orgId: string, roundId?: string) => (roundId ? [orgId, "investors", roundId] : [orgId, "investors"]) as readonly string[],
     activity: (orgId: string, investorId: string) => [orgId, "activity", investorId] as const,
     commentStats: (orgId: string) => [orgId, "comment-stats"] as const,
 };
 
 /* ---------- queries ---------- */
 
-export function useInvestors(orgId: string) {
+export function useInvestors(orgId: string, roundId: string) {
     return useQuery({
-        queryKey: keys.investors(orgId),
+        queryKey: keys.investors(orgId, roundId),
         queryFn: async (): Promise<Investor[]> => {
-            const {data, error} = await supabase.from("investors").select("*").eq("org_id", orgId).order("created_at");
+            const {data, error} = await supabase.from("investors").select("*").eq("round_id", roundId).order("created_at");
             if (error) throw error;
             return (data ?? []).map(normalizeInvestor);
-        },
-    });
-}
-
-export function useRound(orgId: string) {
-    return useQuery({
-        queryKey: keys.round(orgId),
-        queryFn: async (): Promise<FundRound | null> => {
-            const {data, error} = await supabase.from("fund_round").select("*").eq("org_id", orgId).maybeSingle();
-            if (error) throw error;
-            return data ? {...data, target: Number(data.target) || 0, cap: Number(data.cap) || 0} : null;
         },
     });
 }
@@ -79,8 +69,8 @@ export function usePipelineRealtime(orgId: string | undefined) {
             .channel(`org:${orgId}`)
             .on("postgres_changes", {event: "*", schema: "public", table: "investors", filter}, () =>
                 qc.invalidateQueries({queryKey: keys.investors(orgId)}))
-            .on("postgres_changes", {event: "*", schema: "public", table: "fund_round", filter}, () =>
-                qc.invalidateQueries({queryKey: keys.round(orgId)}))
+            .on("postgres_changes", {event: "*", schema: "public", table: "rounds", filter}, () =>
+                qc.invalidateQueries({queryKey: roundKeys.list(orgId)}))
             .on("postgres_changes", {event: "*", schema: "public", table: "investor_activity", filter}, (p) => {
                 const id = (p.new as Partial<Activity>)?.investor_id ?? (p.old as Partial<Activity>)?.investor_id;
                 if (id) qc.invalidateQueries({queryKey: keys.activity(orgId, id)});
@@ -103,13 +93,13 @@ function onError(error: unknown) {
     toast.error(errorMessage(error));
 }
 
-export function useSaveInvestor(orgId: string) {
+export function useSaveInvestor(orgId: string, roundId: string) {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: async ({id, values}: {id?: string; values: InvestorInput}) => {
             const res = id
                 ? await supabase.from("investors").update(values).eq("id", id).eq("org_id", orgId).select().single()
-                : await supabase.from("investors").insert({...values, org_id: orgId}).select().single();
+                : await supabase.from("investors").insert({...values, org_id: orgId, round_id: roundId}).select().single();
             if (res.error) throw res.error;
             return normalizeInvestor(res.data);
         },
@@ -122,7 +112,7 @@ export function useSaveInvestor(orgId: string) {
     });
 }
 
-export function useMoveStage(orgId: string) {
+export function useMoveStage(orgId: string, roundId: string) {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: async ({id, stage}: {id: string; stage: StageId}) => {
@@ -131,21 +121,21 @@ export function useMoveStage(orgId: string) {
         },
         // Optimistic: move the card immediately, roll back on failure.
         onMutate: async ({id, stage}) => {
-            await qc.cancelQueries({queryKey: keys.investors(orgId)});
-            const prev = qc.getQueryData<Investor[]>(keys.investors(orgId));
-            qc.setQueryData<Investor[]>(keys.investors(orgId), (rows) => rows?.map((r) => (r.id === id ? {...r, stage} : r)));
+            await qc.cancelQueries({queryKey: keys.investors(orgId, roundId)});
+            const prev = qc.getQueryData<Investor[]>(keys.investors(orgId, roundId));
+            qc.setQueryData<Investor[]>(keys.investors(orgId, roundId), (rows) => rows?.map((r) => (r.id === id ? {...r, stage} : r)));
             return {prev};
         },
         onError: (error, _vars, ctx) => {
-            if (ctx?.prev) qc.setQueryData(keys.investors(orgId), ctx.prev);
+            if (ctx?.prev) qc.setQueryData(keys.investors(orgId, roundId), ctx.prev);
             onError(error);
         },
         onSuccess: (_d, {id, stage}) => {
-            const name = qc.getQueryData<Investor[]>(keys.investors(orgId))?.find((r) => r.id === id)?.name;
+            const name = qc.getQueryData<Investor[]>(keys.investors(orgId, roundId))?.find((r) => r.id === id)?.name;
             toast.success(`${name ?? "Investor"} → ${STAGE_BY_ID[stage].name}`);
             qc.invalidateQueries({queryKey: keys.activity(orgId, id)});
         },
-        onSettled: () => qc.invalidateQueries({queryKey: keys.investors(orgId)}),
+        onSettled: () => qc.invalidateQueries({queryKey: keys.investors(orgId, roundId)}),
     });
 }
 
@@ -218,21 +208,6 @@ export function useDeleteComment(orgId: string) {
         onSuccess: (_d, {investorId}) => {
             toast.success("Comment deleted");
             refresh(investorId);
-        },
-        onError,
-    });
-}
-
-export function useSaveRound(orgId: string) {
-    const qc = useQueryClient();
-    return useMutation({
-        mutationFn: async (values: FundRoundInput) => {
-            const {error} = await supabase.from("fund_round").update(values).eq("org_id", orgId);
-            if (error) throw error;
-        },
-        onSuccess: () => {
-            toast.success("Round saved");
-            qc.invalidateQueries({queryKey: keys.round(orgId)});
         },
         onError,
     });

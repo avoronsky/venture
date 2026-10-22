@@ -7,6 +7,7 @@ import {TooltipProvider} from "@/components/ui/tooltip";
 import {AuthProvider} from "@/hooks/useAuth";
 import {ProtectedRoute} from "@/components/ProtectedRoute";
 import {OrgRoute} from "@/components/OrgRoute";
+import {LegacyInvestorRedirect, RoundIndex, RoundRoute} from "@/components/RoundRoute";
 import {FullPageSpinner} from "@/components/FullPageSpinner";
 import {SetupRequired} from "@/pages/SetupRequired";
 import {isSupabaseConfigured} from "@/lib/supabase";
@@ -38,8 +39,13 @@ function App() {
                                     <Route path="/" element={<ProtectedRoute><Home/></ProtectedRoute>}/>
                                     <Route path="/orgs" element={<ProtectedRoute><Organizations/></ProtectedRoute>}/>
                                     <Route path="/o/:orgId" element={<ProtectedRoute><OrgRoute/></ProtectedRoute>}>
-                                        <Route index element={<Pipeline/>}/>
-                                        <Route path="investors/:investorId" element={<Pipeline/>}/>
+                                        {/* Last-used round, or "create your first round" */}
+                                        <Route index element={<RoundIndex/>}/>
+                                        <Route path="r/:roundId" element={<RoundRoute/>}>
+                                            <Route index element={<Pipeline/>}/>
+                                            <Route path="investors/:investorId" element={<Pipeline/>}/>
+                                        </Route>
+                                        <Route path="investors/:investorId" element={<LegacyInvestorRedirect/>}/>
                                         <Route path="settings" element={<OrgSettings/>}/>
                                     </Route>
                                     <Route path="/o" element={<Navigate to="/orgs" replace/>}/>

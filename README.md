@@ -1,6 +1,6 @@
 # Mars Rovers Raise Pipeline
 
-Investor CRM for running a fundraise: a stage board, a sortable table, a raise gauge against the round target, a follow-up queue, dated comments on each investor, and CSV export. Each company raising is an **organization**; people sign in with Google, create organizations, and share access with teammates.
+Investor CRM for running a fundraise: a stage board, a sortable table, a raise gauge against the round target, a follow-up queue, dated comments on each investor, and CSV export. Each company raising is an **organization** with one or more **rounds**, each with its own pipeline; people sign in with Google, create organizations, and share access with teammates.
 
 ## Stack
 
@@ -24,6 +24,8 @@ src/
   hooks/useAuth.tsx           session, Google sign-in
   hooks/useOrganizations.ts   my organizations, create/rename/delete, members
   hooks/useOrg.tsx            current organization + my role in it
+  hooks/useRounds.ts          rounds: list, create (optionally copying investors), settings, delete
+  hooks/useCurrentRound.tsx   the round in the URL
   hooks/usePipeline.ts        org-scoped queries, mutations, realtime invalidation
   lib/pipeline.ts             stages, weights, money parsing, metrics (pure, unit-tested)
   lib/csv.ts, importExport.ts CSV export
@@ -41,8 +43,9 @@ Routes:
 | `/auth` | Sign in with Google |
 | `/` | Last-used organization; onboarding for a user with none |
 | `/orgs` | All my organizations, create a new one |
-| `/o/:orgId` | Pipeline |
-| `/o/:orgId/investors/:id` | Pipeline with an investor open (shareable link); `new` to add one |
+| `/o/:orgId` | Opens the last-used round, or offers to create the first one |
+| `/o/:orgId/r/:roundId` | Pipeline for one round |
+| `/o/:orgId/r/:roundId/investors/:id` | Pipeline with an investor open (shareable link); `new` to add one |
 | `/o/:orgId/settings` | Organization name, people with access, leave or delete |
 
 ## Organizations and access
@@ -67,6 +70,15 @@ The weighted pipeline multiplies each investor's expected amount by the stage we
 
 Stage moves and new investors are written to the activity log by a database trigger, so history is consistent no matter which client made the change.
 
+## Rounds
+
+An organization can run several rounds (pre-seed, seed, Series A, a bridge). Each round has its own pipeline, target, terms, raise meter and follow-ups; the sidebar lists active rounds first and closed rounds below.
+
+- **New round** (the + next to Rounds in the sidebar, editors and owners): give it a name and optionally a target. You can start it with the investors from another round. They're added at Target with contact details, type, priority, mandate and notes; stages, amounts, next steps and comments stay with the original round.
+- **Round settings** (link under the round name): rename, change target, instrument, cap and close date, or mark the round closed.
+- **Deleting a round** (owners only) deletes its investors and their comments. Other rounds aren't affected.
+- The app opens the round you used last in each organization, or the newest active one.
+
 ## Comments
 
 Each investor has a **Comments** tab: a dated timeline of notes from calls, emails and meetings.
@@ -85,6 +97,7 @@ All of this is enforced in the database (`supabase/migrations/20261020000000_inv
 2. **Apply the schema.** Run each file in `supabase/migrations/` in name order: open it, copy **the contents of the file** (not its path), paste into **SQL Editor** and run.
    1. `20261018000000_pipeline.sql`: tables, access rules, realtime. Run once.
    2. `20261020000000_investor_comments.sql`: dated comments. Safe to run again.
+   3. `20261022000000_rounds.sql`: multiple rounds per organization. Your current round settings become the first round and every existing investor (with comments) moves into it. Safe to run again.
 
    (CLI alternative: `supabase link --project-ref <ref>` then `supabase db push`, which applies whatever hasn't run yet.)
    - Already ran the earlier single-organization version? Run the contents of `supabase/scripts/drop_v1_single_tenant.sql` first. It deletes the old pipeline tables and their data.

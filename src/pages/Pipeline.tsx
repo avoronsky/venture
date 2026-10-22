@@ -3,7 +3,8 @@ import {useNavigate, useParams} from "react-router-dom";
 import {format} from "date-fns";
 import {AlertCircle, Download, Plus, RefreshCw, Search} from "lucide-react";
 import {useOrg} from "@/hooks/useOrg";
-import {useCommentStats, useInvestors, useMoveStage, useRound} from "@/hooks/usePipeline";
+import {useCommentStats, useInvestors, useMoveStage} from "@/hooks/usePipeline";
+import {useCurrentRound} from "@/hooks/useCurrentRound";
 import {AppShell} from "@/components/AppShell";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -34,11 +35,11 @@ export default function Pipeline() {
     const {org, canEdit} = useOrg();
     const {investorId} = useParams();
     const navigate = useNavigate();
-    const investorsQ = useInvestors(org.id);
-    const roundQ = useRound(org.id);
-    const move = useMoveStage(org.id);
+    const round = useCurrentRound();
+    const investorsQ = useInvestors(org.id, round.id);
+    const move = useMoveStage(org.id, round.id);
     const {data: commentStats} = useCommentStats(org.id);
-    const base = `/o/${org.id}`;
+    const base = `/o/${org.id}/r/${round.id}`;
 
     const [view, setView] = useState<View>(readView);
     const [query, setQuery] = useState("");
@@ -48,8 +49,7 @@ export default function Pipeline() {
     const [roundOpen, setRoundOpen] = useState(false);
 
     const investors = useMemo(() => investorsQ.data ?? [], [investorsQ.data]);
-    const round = roundQ.data;
-    const metrics = useMemo(() => raiseMetrics(investors, round?.target ?? 0), [investors, round?.target]);
+    const metrics = useMemo(() => raiseMetrics(investors, round.target), [investors, round.target]);
     const passedCount = investors.filter((i) => i.stage === "passed").length;
 
     const filtered = useMemo(() => {
@@ -75,27 +75,27 @@ export default function Pipeline() {
         }
     };
 
-    const roundFacts = round ? [
-        round.name ? `${round.name} round` : "",
+    const roundFacts = [
+        round.status === "closed" ? "Closed" : "",
         round.instrument,
         round.cap ? `${formatMoney(round.cap)} cap` : "",
         round.close_date ? `closing ${format(new Date(round.close_date + "T00:00:00"), "MMM d, yyyy")}` : "",
-    ].filter(Boolean) : [];
+    ].filter(Boolean);
 
     return (
         <AppShell
             wide
-            title="Pipeline"
+            title={round.name}
             description={<>
-                {roundFacts.length > 0 ? <span>{roundFacts.join(", ")}</span> : <span>No round details yet</span>}
+                {roundFacts.length > 0 ? <span>{roundFacts.join(", ")}</span> : <span>No target or terms yet</span>}
                 <button type="button" onClick={() => setRoundOpen(true)}
                         className="text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground">
-                    {canEdit ? (roundFacts.length ? "Edit round" : "Add round details") : "Round details"}
+                    {canEdit ? "Round settings" : "Round details"}
                 </button>
             </>}
             actions={<>
                 {investors.length > 0 && (
-                    <Button variant="ghost" size="sm" onClick={() => downloadInvestorsCSV(investors, org.name)}><Download/>Export</Button>
+                    <Button variant="ghost" size="sm" onClick={() => downloadInvestorsCSV(investors, `${org.name} ${round.name}`)}><Download/>Export</Button>
                 )}
                 {canEdit && <Button onClick={() => navigate(`${base}/investors/new`)}><Plus/>Add investor</Button>}
             </>}
@@ -175,7 +175,7 @@ export default function Pipeline() {
             )}
 
             <InvestorSheet open={sheetOpen && (canEdit || !isNew)} investor={selected} canEdit={canEdit} onClose={closeSheet}/>
-            <RoundSheet open={roundOpen} round={round} canEdit={canEdit} onClose={() => setRoundOpen(false)}/>
+            <RoundSheet open={roundOpen} round={round} investorCount={investors.length} onClose={() => setRoundOpen(false)}/>
         </AppShell>
     );
 }

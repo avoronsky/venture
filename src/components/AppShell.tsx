@@ -2,11 +2,14 @@ import {type ReactNode, useState} from "react";
 import {Link, NavLink, useLocation} from "react-router-dom";
 import {useTheme} from "next-themes";
 import {Check, ChevronsUpDown, Columns3, LogOut, Menu, Monitor, Moon, Plus, Sun, Users} from "lucide-react";
+import {useRounds} from "@/hooks/useRounds";
+import {useOptionalRound} from "@/hooks/useCurrentRound";
+import {NewRoundForm} from "@/components/pipeline/NewRoundForm";
 import {useAuth} from "@/hooks/useAuth";
 import {useOptionalOrg} from "@/hooks/useOrg";
 import {useMyOrganizations} from "@/hooks/useOrganizations";
 import {Button} from "@/components/ui/button";
-import {Sheet, SheetContent, SheetTitle} from "@/components/ui/sheet";
+import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle} from "@/components/ui/sheet";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -29,14 +32,21 @@ interface AppShellProps {
 /** Sidebar layout for every signed-in screen. */
 export function AppShell({title, description, actions, children, wide = false}: AppShellProps) {
     const [menuOpen, setMenuOpen] = useState(false);
+    const [newRoundOpen, setNewRoundOpen] = useState(false);
     const location = useLocation();
     const current = useOptionalOrg();
+    const currentRound = useOptionalRound();
+    const {data: rounds = []} = useRounds(current?.org.id);
+    const openNewRound = () => {
+        setMenuOpen(false);
+        setNewRoundOpen(true);
+    };
 
     return (
         <div className="min-h-svh lg:grid lg:grid-cols-[236px_minmax(0,1fr)]">
             {/* Desktop sidebar */}
             <aside className="sticky top-0 hidden h-svh flex-col border-r bg-background lg:flex">
-                <SidebarContents/>
+                <SidebarContents onNewRound={openNewRound}/>
             </aside>
 
             {/* Mobile top bar */}
@@ -47,9 +57,25 @@ export function AppShell({title, description, actions, children, wide = false}: 
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                 <SheetContent side="left" className="flex w-[280px] flex-col gap-0 p-0">
                     <SheetTitle className="sr-only">Menu</SheetTitle>
-                    <SidebarContents key={location.pathname} onNavigate={() => setMenuOpen(false)}/>
+                    <SidebarContents key={location.pathname} onNavigate={() => setMenuOpen(false)} onNewRound={openNewRound}/>
                 </SheetContent>
             </Sheet>
+
+            {current && (
+                <Sheet open={newRoundOpen} onOpenChange={setNewRoundOpen}>
+                    <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+                        <SheetHeader className="border-b px-6 py-4 text-left">
+                            <SheetTitle className="text-xl">New round</SheetTitle>
+                            <SheetDescription>Each round has its own pipeline, target and follow-ups.</SheetDescription>
+                        </SheetHeader>
+                        <div className="flex-1 overflow-y-auto px-6 py-5">
+                            {newRoundOpen && (
+                                <NewRoundForm rounds={rounds} copyFromDefault={currentRound?.id} onCreated={() => setNewRoundOpen(false)}/>
+                            )}
+                        </div>
+                    </SheetContent>
+                </Sheet>
+            )}
 
             <main className={cn("mx-auto w-full px-4 pb-16 pt-6 sm:px-8 lg:pt-9", wide ? "max-w-[1480px]" : "max-w-[880px]")}>
                 <header className="mb-7 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
@@ -77,11 +103,14 @@ function Brand({label}: {label: string}) {
     );
 }
 
-function SidebarContents({onNavigate}: {onNavigate?: () => void}) {
+function SidebarContents({onNavigate, onNewRound}: {onNavigate?: () => void; onNewRound: () => void}) {
     const {email, signOut} = useAuth();
     const current = useOptionalOrg();
     const {data: memberships = []} = useMyOrganizations();
+    const {data: rounds = []} = useRounds(current?.org.id);
     const {theme, setTheme} = useTheme();
+    const active = rounds.filter((r) => r.status === "active");
+    const closed = rounds.filter((r) => r.status === "closed");
 
     const navItem = ({isActive}: {isActive: boolean}) => cn(
         "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13.5px] transition-colors",
@@ -116,10 +145,36 @@ function SidebarContents({onNavigate}: {onNavigate?: () => void}) {
             </DropdownMenu>
 
             {current ? (
-                <nav className="flex flex-col gap-0.5" aria-label="Organization">
-                    <NavLink end to={`/o/${current.org.id}`} className={navItem} onClick={onNavigate}>
-                        <Columns3 className="h-4 w-4"/>Pipeline
-                    </NavLink>
+                <nav className="flex min-h-0 flex-col gap-5" aria-label="Organization">
+                    <div className="flex min-h-0 flex-col gap-0.5">
+                        <div className="flex items-center justify-between px-2.5 pb-1">
+                            <span className="text-xs font-medium text-muted-foreground">Rounds</span>
+                            {current.canEdit && (
+                                <button type="button" onClick={onNewRound} aria-label="New round" title="New round"
+                                        className="grid h-6 w-6 place-items-center rounded-md text-muted-foreground hover:bg-sunken hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+                                    <Plus className="h-4 w-4"/>
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex max-h-[45svh] flex-col gap-0.5 overflow-y-auto">
+                            {active.map((r) => (
+                                <NavLink key={r.id} to={`/o/${current.org.id}/r/${r.id}`} className={navItem} onClick={onNavigate}>
+                                    <Columns3 className="h-4 w-4 shrink-0"/><span className="truncate">{r.name}</span>
+                                </NavLink>
+                            ))}
+                            {closed.length > 0 && <span className="px-2.5 pb-0.5 pt-2 text-xs text-muted-foreground">Closed</span>}
+                            {closed.map((r) => (
+                                <NavLink key={r.id} to={`/o/${current.org.id}/r/${r.id}`} className={navItem} onClick={onNavigate}>
+                                    <Columns3 className="h-4 w-4 shrink-0 opacity-50"/><span className="truncate">{r.name}</span>
+                                </NavLink>
+                            ))}
+                            {rounds.length === 0 && current.canEdit && (
+                                <button type="button" onClick={onNewRound} className={navItem({isActive: false})}>
+                                    <Plus className="h-4 w-4"/>Create the first round
+                                </button>
+                            )}
+                        </div>
+                    </div>
                     <NavLink to={`/o/${current.org.id}/settings`} className={navItem} onClick={onNavigate}>
                         <Users className="h-4 w-4"/>People & settings
                     </NavLink>

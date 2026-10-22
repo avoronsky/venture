@@ -25,6 +25,7 @@ export interface Member {
 export interface Investor {
     id: string;
     org_id: string;
+    round_id: string;
     name: string;
     partner: string;
     email: string;
@@ -47,7 +48,7 @@ export interface Investor {
     updated_at: string;
 }
 
-export type InvestorInput = Omit<Investor, "id" | "org_id" | "created_by" | "created_at" | "updated_at">;
+export type InvestorInput = Omit<Investor, "id" | "org_id" | "round_id" | "created_by" | "created_at" | "updated_at">;
 
 export interface Activity {
     id: number;
@@ -70,14 +71,20 @@ export interface CommentStats {
     last_comment_on: string | null;
 }
 
-export interface FundRound {
+export type RoundStatus = "active" | "closed";
+
+/** One fundraising round (Seed, Series A, a bridge...). Each round has its own pipeline of investors. */
+export interface Round {
+    id: string;
     org_id: string;
     name: string;
+    status: RoundStatus;
     target: number;
     instrument: string;
     cap: number;
     close_date: string | null;
+    created_at: string;
     updated_at: string;
 }
 
-export type FundRoundInput = Omit<FundRound, "org_id" | "updated_at">;
+export type RoundInput = Pick<Round, "name" | "status" | "target" | "instrument" | "cap" | "close_date">;

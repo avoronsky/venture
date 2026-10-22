@@ -51,8 +51,8 @@ export function useMyOrganizations() {
 export function useCreateOrganization() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: async (name: string) => {
-            const {data, error} = await supabase.rpc("create_organization", {p_name: name});
+        mutationFn: async ({name, roundName}: {name: string; roundName?: string}) => {
+            const {data, error} = await supabase.rpc("create_organization", {p_name: name, p_round_name: roundName || "First round"});
             if (error) throw error;
             return data as string;
         },

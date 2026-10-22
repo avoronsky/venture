@@ -27,6 +27,7 @@ import {INVESTOR_TYPES, MANDATES, parseMoney, PRIORITIES, STAGE_IDS, STAGES} fro
 import type {Investor, InvestorInput} from "@/lib/types";
 import {cn} from "@/lib/utils";
 import {useOrg} from "@/hooks/useOrg";
+import {useCurrentRound} from "@/hooks/useCurrentRound";
 
 const money = z.string().trim().refine((v) => v === "" || parseMoney(v) > 0, "Use a number like 250K or 1.5M");
 
@@ -97,7 +98,8 @@ interface InvestorSheetProps {
 export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetProps) {
     const isNew = !investor;
     const {org} = useOrg();
-    const save = useSaveInvestor(org.id);
+    const round = useCurrentRound();
+    const save = useSaveInvestor(org.id, round.id);
     const del = useDeleteInvestor(org.id);
     const {data: stats} = useCommentStats(org.id);
     const commentCount = investor ? stats?.get(investor.id)?.comment_count ?? 0 : 0;
