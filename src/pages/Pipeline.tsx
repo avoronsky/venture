@@ -1,10 +1,9 @@
-import {useMemo, useRef, useState} from "react";
+import {useMemo, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import {format} from "date-fns";
-import {AlertCircle, Download, Plus, RefreshCw, Search, Upload} from "lucide-react";
-import {toast} from "sonner";
+import {AlertCircle, Download, Plus, RefreshCw, Search} from "lucide-react";
 import {useOrg} from "@/hooks/useOrg";
-import {useCommentStats, useImportInvestors, useInvestors, useMoveStage, useRound} from "@/hooks/usePipeline";
+import {useCommentStats, useInvestors, useMoveStage, useRound} from "@/hooks/usePipeline";
 import {AppShell} from "@/components/AppShell";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -18,7 +17,7 @@ import {InvestorTable} from "@/components/pipeline/InvestorTable";
 import {InvestorSheet} from "@/components/pipeline/InvestorSheet";
 import {RoundSheet} from "@/components/pipeline/RoundSheet";
 import {formatMoney, INVESTOR_TYPES, raiseMetrics} from "@/lib/pipeline";
-import {downloadInvestorsCSV, investorsFromCSV} from "@/lib/importExport";
+import {downloadInvestorsCSV} from "@/lib/importExport";
 import {cn} from "@/lib/utils";
 
 type View = "board" | "table";
@@ -39,7 +38,6 @@ export default function Pipeline() {
     const roundQ = useRound(org.id);
     const move = useMoveStage(org.id);
     const {data: commentStats} = useCommentStats(org.id);
-    const importer = useImportInvestors(org.id);
     const base = `/o/${org.id}`;
 
     const [view, setView] = useState<View>(readView);
@@ -48,7 +46,6 @@ export default function Pipeline() {
     const [type, setType] = useState("all");
     const [showPassed, setShowPassed] = useState(false);
     const [roundOpen, setRoundOpen] = useState(false);
-    const fileInput = useRef<HTMLInputElement>(null);
 
     const investors = useMemo(() => investorsQ.data ?? [], [investorsQ.data]);
     const round = roundQ.data;
@@ -78,15 +75,6 @@ export default function Pipeline() {
         }
     };
 
-    const onImport = async (file: File) => {
-        const res = investorsFromCSV(await file.text());
-        if (!res.ok) {
-            toast.error(res.error);
-            return;
-        }
-        importer.mutate(res.rows);
-    };
-
     const roundFacts = round ? [
         round.name ? `${round.name} round` : "",
         round.instrument,
@@ -106,16 +94,6 @@ export default function Pipeline() {
                 </button>
             </>}
             actions={<>
-                <input ref={fileInput} type="file" accept=".csv,text/csv" hidden onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) onImport(f);
-                    e.target.value = "";
-                }}/>
-                {canEdit && (
-                    <Button variant="ghost" size="sm" onClick={() => fileInput.current?.click()} disabled={importer.isPending}>
-                        <Upload/>Import
-                    </Button>
-                )}
                 {investors.length > 0 && (
                     <Button variant="ghost" size="sm" onClick={() => downloadInvestorsCSV(investors, org.name)}><Download/>Export</Button>
                 )}
@@ -138,7 +116,7 @@ export default function Pipeline() {
                     <Skeleton className="h-80 rounded-xl"/>
                 </div>
             ) : investors.length === 0 ? (
-                <EmptyPipeline canEdit={canEdit} onAdd={() => navigate(`${base}/investors/new`)} onImport={() => fileInput.current?.click()}/>
+                <EmptyPipeline canEdit={canEdit} onAdd={() => navigate(`${base}/investors/new`)}/>
             ) : (
                 <div className="flex flex-col gap-10">
                     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -202,28 +180,17 @@ export default function Pipeline() {
     );
 }
 
-function EmptyPipeline({canEdit, onAdd, onImport}: {canEdit: boolean; onAdd: () => void; onImport: () => void}) {
+function EmptyPipeline({canEdit, onAdd}: {canEdit: boolean; onAdd: () => void}) {
     return (
-        <div className="grid gap-8 rounded-2xl border bg-card p-6 sm:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="rounded-2xl border bg-card p-6 sm:p-10">
             <div className="flex flex-col items-start gap-4">
                 <h2 className="text-2xl font-bold tracking-[-0.02em]">Start your investor list</h2>
                 <p className="max-w-md text-muted-foreground">
                     Add the funds, angels and strategics you plan to talk to. Move them across stages as conversations
                     progress, and the meter shows how much of the round is committed.
                 </p>
-                {canEdit ? (
-                    <div className="flex flex-wrap gap-2">
-                        <Button onClick={onAdd}><Plus/>Add investor</Button>
-                        <Button variant="outline" onClick={onImport}><Upload/>Import a CSV</Button>
-                    </div>
-                ) : <p className="text-sm text-muted-foreground">An editor or owner can add investors.</p>}
-            </div>
-            <div className="text-sm text-muted-foreground">
-                <p className="mb-2 font-medium text-foreground">CSV columns we recognize</p>
-                <p className="leading-relaxed">
-                    Fund or Name (required), Partner, Email, Type, Stage, Priority, Mandate, Check min, Check max, Amount,
-                    Intro via, Geo, Next step, Next date, Last contact, Notes. Stage can be free text such as "IC", "DD" or "passed".
-                </p>
+                {canEdit ? <Button onClick={onAdd}><Plus/>Add investor</Button>
+                    : <p className="text-sm text-muted-foreground">An editor or owner can add investors.</p>}
             </div>
         </div>
     );

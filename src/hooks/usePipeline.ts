@@ -164,22 +164,6 @@ export function useDeleteInvestor(orgId: string) {
     });
 }
 
-export function useImportInvestors(orgId: string) {
-    const qc = useQueryClient();
-    return useMutation({
-        mutationFn: async (rows: InvestorInput[]) => {
-            const {error} = await supabase.from("investors").insert(rows.map((r) => ({...r, org_id: orgId})));
-            if (error) throw error;
-            return rows.length;
-        },
-        onSuccess: (n) => {
-            toast.success(`Imported ${n} investor${n === 1 ? "" : "s"}`);
-            qc.invalidateQueries({queryKey: keys.investors(orgId)});
-        },
-        onError,
-    });
-}
-
 function useCommentRefresh(orgId: string) {
     const qc = useQueryClient();
     return (investorId: string) => {

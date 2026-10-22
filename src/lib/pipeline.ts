@@ -114,36 +114,3 @@ export function raiseMetrics(rows: PipelineRow[], target: number): RaiseMetrics 
     const weighted = live.reduce((a, r) => a + weightOf(r), 0);
     return {committed, termSheets, earlyWeighted, weighted, target, remaining: target ? Math.max(0, target - committed) : 0};
 }
-
-/** Map free-text stage labels from spreadsheets onto stage ids. */
-export function mapStage(value: unknown): StageId {
-    const v = String(value ?? "").toLowerCase().trim();
-    const exact = STAGES.find((s) => s.id === v || s.name.toLowerCase() === v);
-    if (exact) return exact.id;
-    if (/pass|declin/.test(v)) return "passed";
-    if (/term/.test(v)) return "termsheet";
-    if (/commit/.test(v)) return "committed";
-    if (/close|wired|signed/.test(v)) return "closed";
-    if (/\bic\b|partner/.test(v)) return "ic";
-    if (/dilig|\bdd\b/.test(v)) return "diligence";
-    if (/meet|call/.test(v)) return "meeting";
-    if (/contact|reach|email/.test(v)) return "contacted";
-    return "target";
-}
-
-export function mapMandate(value: unknown): Mandate {
-    const v = String(value ?? "").toLowerCase().trim();
-    if (v in MANDATES) return v as Mandate;
-    if (/yes|ok|allow/.test(v)) return "yes";
-    if (/no|excl/.test(v)) return "no";
-    if (/case|open|maybe/.test(v)) return "open";
-    return "unknown";
-}
-
-export function normalizeDate(value: unknown): string | null {
-    const v = String(value ?? "").trim();
-    if (!v) return null;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-    const d = new Date(v);
-    return Number.isNaN(d.getTime()) ? null : todayISO(d);
-}

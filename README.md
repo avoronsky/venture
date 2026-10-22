@@ -1,6 +1,6 @@
 # Mars Rovers Raise Pipeline
 
-Investor CRM for running a fundraise: a stage board, a sortable table, a raise gauge against the round target, a follow-up queue, per-investor activity logs, and CSV import/export. Each company raising is an **organization**; people sign in with Google, create organizations, and share access with teammates.
+Investor CRM for running a fundraise: a stage board, a sortable table, a raise gauge against the round target, a follow-up queue, dated comments on each investor, and CSV export. Each company raising is an **organization**; people sign in with Google, create organizations, and share access with teammates.
 
 ## Stack
 
@@ -26,7 +26,7 @@ src/
   hooks/useOrg.tsx            current organization + my role in it
   hooks/usePipeline.ts        org-scoped queries, mutations, realtime invalidation
   lib/pipeline.ts             stages, weights, money parsing, metrics (pure, unit-tested)
-  lib/csv.ts, importExport.ts CSV import/export
+  lib/csv.ts, importExport.ts CSV export
   lib/supabase.ts, types.ts   client + row types
   pages/                      Auth, Home (onboarding), Organizations, Pipeline, OrgSettings, NotFound
 supabase/migrations/          schema, triggers, RLS policies, realtime publication
@@ -134,6 +134,6 @@ Any static host works instead (Vercel, Netlify, Cloudflare Pages, Firebase Hosti
 - secret `SUPABASE_ACCESS_TOKEN` (from supabase.com/dashboard/account/tokens)
 - secret `SUPABASE_DB_PASSWORD`
 
-## CSV import
+## CSV export
 
-The importer matches headers case-insensitively: Fund/Name (required), Partner, Email, Type, Stage, Priority, Mandate, Check min, Check max, Amount, Can lead, Intro via, Geo, Next step, Next date, Last contact, Notes. Free-text stages such as "passed", "IC" or "DD" map onto the right column.
+**Export** on the pipeline page downloads every investor in the current organization as a CSV, for board updates or backups. There is no CSV import; add investors in the app.
