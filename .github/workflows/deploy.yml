@@ -3,7 +3,7 @@ name: Build & Deploy
 on:
   push:
     branches: [main]
-    paths-ignore: ["supabase/**", "**.md"]
+    paths-ignore: ["supabase/**", "docs/**", "**.md"]
   pull_request:
     branches: [main]
   workflow_dispatch:

@@ -1,137 +1,178 @@
-# Mars Rovers Raise Pipeline
+# Venture: fundraising pipeline for founders
 
-Investor CRM for running a fundraise: a stage board, a sortable table, a raise gauge against the round target, a follow-up queue, dated comments on each investor, and CSV export. Each company raising is an **organization** with one or more **rounds**, each with its own pipeline; people sign in with Google, create organizations, and share access with teammates.
+Venture is a small CRM for running a startup fundraise. It tracks every investor from the first email to the wire, shows how much of the round is committed, tells you who needs a follow-up today, and lets co-founders work on the same pipeline.
 
-## Stack
+**Live app:** <https://avoronsky.github.io/venture/>. Sign in with Google. It runs on GitHub Pages, with Supabase for sign-in and the database. It's deployed automatically from `main`.
 
-Same conventions as the Hasper frontend:
+![Pipeline board for a seed round](docs/screenshots/pipeline-board.png)
 
-- **React 19 + TypeScript**, built with **Vite** (`@vitejs/plugin-react-swc`)
-- **Tailwind CSS v4** (CSS-first config in `src/index.css`, `@tailwindcss/postcss`)
-- **shadcn/ui** components on Radix (`src/components/ui`), `lucide-react` icons, `sonner` toasts
-- **TanStack Query** for server state, **react-hook-form + zod** for forms, **react-router-dom** for routing, `next-themes` for light/dark
-- **Supabase**: Postgres with row level security, email sign-in links, realtime updates
+*All screenshots use made-up sample data for a fictional company, Mars Rovers Inc.*
 
-## Project layout
+## What it does
 
-```
-src/
-  App.tsx                     providers + routes
-  index.css                   Tailwind v4 theme tokens (light + dark)
-  components/ui/              shadcn/ui primitives
-  components/pipeline/        Board, InvestorTable, InvestorSheet, RoundSheet, RaiseGauge, NextActions
-  components/                 AppHeader (org switcher), ProtectedRoute, OrgRoute, AuthShell
-  hooks/useAuth.tsx           session, Google sign-in
-  hooks/useOrganizations.ts   my organizations, create/rename/delete, members
-  hooks/useOrg.tsx            current organization + my role in it
-  hooks/useRounds.ts          rounds: list, create (optionally copying investors), settings, delete
-  hooks/useCurrentRound.tsx   the round in the URL
-  hooks/usePipeline.ts        org-scoped queries, mutations, realtime invalidation
-  lib/pipeline.ts             stages, weights, money parsing, metrics (pure, unit-tested)
-  lib/csv.ts, importExport.ts CSV export
-  lib/supabase.ts, types.ts   client + row types
-  pages/                      Auth, Home (onboarding), Organizations, Pipeline, OrgSettings, NotFound
-supabase/migrations/          schema, triggers, RLS policies, realtime publication
-supabase/scripts/             one-off maintenance SQL
-.github/workflows/            CI + GitHub Pages deploy, optional migrations
-```
+### Organizations, rounds and pipelines
 
-Routes:
+- An **organization** is the company you're raising for. Each organization has one or more **rounds** (pre-seed, seed, Series A, a bridge), and each round has its own investor **pipeline**.
+- The sidebar lists active rounds first, then closed ones. **+** next to *Rounds* starts a new round. A new round can start with the investors from an earlier round.
+- Every investor sits in one of these stages: Target, Contacted, First meeting, Diligence, Partner / IC, Term sheet, Committed, Closed, or Passed.
 
-| Path | Page |
-|------|------|
-| `/auth` | Sign in with Google |
-| `/` | Last-used organization; onboarding for a user with none |
-| `/orgs` | All my organizations, create a new one |
-| `/o/:orgId` | Opens the last-used round, or offers to create the first one |
-| `/o/:orgId/r/:roundId` | Pipeline for one round |
-| `/o/:orgId/r/:roundId/investors/:id` | Pipeline with an investor open (shareable link); `new` to add one |
-| `/investors`, `/investors/:id` | Your private investor database |
-| `/o/:orgId/settings` | Organization name, people with access, leave or delete |
+### Pipeline page
 
-## Organizations and access
+At the top of each round:
 
-- A new user belongs to **no** organization. The first screen asks them to create one; they become its owner.
-- Anyone signed in can create more organizations (e.g. one per company they raise for).
-- Access is per organization and by **email**. An owner adds an email with a role; when that person signs in with the Google account for that address, the organization appears for them. No invitation email is sent; share the app link yourself.
-- Every organization keeps at least one owner (enforced in the database). Members can leave; owners can delete the organization, which deletes its pipeline.
+- **Raise meter.** It shows how much is committed against the round target, plus term sheets and the *weighted pipeline*. The weighted pipeline counts each investor's expected amount multiplied by the likelihood of its stage.
+- **Stage counts.** How many investors are at each stage.
+- **Follow-ups.** Next steps by due date, with overdue items first.
 
-| Role   | Read | Change investors, activity, round | Manage access, rename, delete org |
-|--------|------|-----------------------------------|-----------------------------------|
-| owner  | ✓    | ✓                                 | ✓                                 |
-| editor | ✓    | ✓                                 |                                   |
-| viewer | ✓    |                                   |                                   |
+Below the meter, two views of the same investors:
 
-All of this is enforced with row level security, not just in the UI. Every pipeline row carries an `org_id`; investors can't be moved between organizations and activity always inherits its investor's organization.
+- **Board.** Drag cards between stages. Each card shows priority (A, B or C), the check size, whether the fund's mandate allows the deal, the next step's due date, and how many comments it has.
+- **Table.** Sortable columns, with the same search and filters as the board.
 
-## Pipeline stages
+**Export** downloads the round as a CSV file, for board updates or backups.
 
-Target → Contacted → First meeting → Diligence → Partner / IC → Term sheet → Committed → Closed, plus Passed.
-The weighted pipeline multiplies each investor's expected amount by the stage weight (2%, 5%, 10%, 25%, 45%, 75%, 95%, 100%). Weights live in `STAGES` in `src/lib/pipeline.ts`.
+![Table view](docs/screenshots/pipeline-table.png)
 
-Stage moves and new investors are written to the activity log by a database trigger, so history is consistent no matter which client made the change.
+### Investor details and dated comments
 
-## Investor database
+Click an investor to open its panel. It has two tabs:
 
-Every user has a private **Investor database** (sidebar tab, `/investors`): investor name, type, website, contact person and email, minimum check, and dated comments. Nobody else can see it, including teammates and organization owners; it's enforced in the database.
+- **Comments:** a dated timeline of notes from calls, emails and meetings, with stage changes mixed in so you can see how the deal moved.
+- **Details:** contact person, check size, mandate, intro source, next step, and so on.
 
-- **Adding to a pipeline** (Add investor in any round): start typing the name and pick a match from your database to fill in type, contact, email and minimum check.
-- **Saved automatically**: whenever you add an investor to a pipeline (or a new round copies investors), it's saved to *your* database if it isn't there yet (matched by name, ignoring case). Teammates' databases aren't touched.
-- Comments in the database are separate from a pipeline's comments: database notes are your own long-term notes on the investor; pipeline comments are shared with the team and belong to one round.
+How comments behave:
+
+- A comment is dated the day it happened. That can be an earlier day than when you write it, and the app then also shows when it was actually written.
+- Each comment shows its author. Edited comments are marked as edited.
+- Adding a comment updates the investor's "last touch" date.
+
+![Investor panel with comments](docs/screenshots/investor-comments.png)
+
+### Your private investor database
+
+**Investor database** in the sidebar is your own list of investors that you keep across companies and rounds. Each entry has a name, type, website, contact person and email, minimum check, and comments. **Only you can see it.** Teammates and organization owners can't.
+
+- **Saved automatically.** Every investor you add to a pipeline, including those copied into a new round, is saved to your database if it isn't there yet. Investors are matched by name, ignoring upper and lower case.
+- **Reusable.** When you add an investor to a pipeline, start typing the name and pick a match from your database. The type, contact person, email and minimum check fill in for you.
+- **Separate comments.** Database comments are your private long-term notes. Pipeline comments are shared with the team and belong to one round.
 - Removing an investor from your database doesn't remove it from any pipeline.
 
-## Rounds
+![Investor database](docs/screenshots/investor-database.png)
 
-An organization can run several rounds (pre-seed, seed, Series A, a bridge). Each round has its own pipeline, target, terms, raise meter and follow-ups; the sidebar lists active rounds first and closed rounds below.
+![Picking an investor from the database when adding to a pipeline](docs/screenshots/add-from-database.png)
 
-- **New round** (the + next to Rounds in the sidebar, editors and owners): give it a name and optionally a target. You can start it with the investors from another round. They're added at Target with contact details, type, priority, mandate and notes; stages, amounts, next steps and comments stay with the original round.
-- **Round settings** (link under the round name): rename, change target, instrument, cap and close date, or mark the round closed.
-- **Deleting a round** (owners only) deletes its investors and their comments. Other rounds aren't affected.
-- The app opens the round you used last in each organization, or the newest active one.
+### Sharing with your team
 
-## Comments
+People sign in with Google. A new user belongs to no organization and is asked to create one; they become its owner. To share, an owner adds a teammate's email address in **People & settings** and gives them a role. The organization appears for that person the next time they sign in with that Google account. No invitation email is sent, so send them the app link yourself.
 
-Each investor has a **Comments** tab: a dated timeline of notes from calls, emails and meetings.
+| Role   | Can see the pipeline | Can change investors, comments and rounds | Can manage people, rename or delete the organization |
+|--------|----------------------|-------------------------------------------|------------------------------------------------------|
+| Owner  | ✓                    | ✓                                         | ✓                                                    |
+| Editor | ✓                    | ✓                                         |                                                      |
+| Viewer | ✓                    |                                           |                                                      |
 
-- A comment's date is the day it happened. It defaults to today and can be set to an earlier day; a backdated comment shows when it was actually written.
-- Comments record their author. Stage changes appear in the same timeline (they can be hidden) and show who made them.
-- Editors and owners can comment. You can edit your own comments; edits are marked. The author or an owner can delete a comment. Stage history can't be deleted.
-- Adding a comment moves the investor's "last touch" date forward when the comment is newer.
-- Board cards and the table show how many comments an investor has and the date of the latest one.
+The rules:
 
-All of this is enforced in the database (`supabase/migrations/20261020000000_investor_comments.sql`).
+- Every organization always keeps at least one owner.
+- Anyone can edit their own comments. The author or an owner can delete a comment.
+- Only owners can delete a round or the organization.
 
-## Set up Supabase (once)
+All of these rules are enforced in the database with row level security, not only hidden in the interface. A user can never read or change another organization's data, or another user's investor database.
+
+![People and settings](docs/screenshots/settings.png)
+
+### Works on a phone, and in dark mode
+
+<p>
+  <img src="docs/screenshots/phone.png" alt="Pipeline on a phone" width="300">
+</p>
+
+![Dark mode](docs/screenshots/pipeline-dark.png)
+
+## Where it's deployed
+
+| Piece | Where | How it gets updated |
+|-------|-------|---------------------|
+| Web app | GitHub Pages: <https://avoronsky.github.io/venture/> | Automatically on every push to `main` (`.github/workflows/deploy.yml`) |
+| Sign-in and database | A Supabase project: Postgres, Google sign-in and realtime updates | SQL migrations in `supabase/migrations/`, run by hand in the SQL Editor or by the optional workflow |
+| Source | <https://github.com/avoronsky/venture> | |
+
+The web app is a static site. All data lives in Supabase, and the browser talks to Supabase directly. The Supabase key in the app is the public *anon* key: access is controlled by the row level security rules in the migrations, not by keeping that key secret.
+
+## Deploy your own copy
+
+You need a Supabase project, a Google Cloud OAuth client and somewhere to host static files. GitHub Pages is free and already set up in this repo.
+
+### 1. Create the database
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. **Apply the schema.** Run each file in `supabase/migrations/` in name order: open it, copy **the contents of the file** (not its path), paste into **SQL Editor** and run.
-   1. `20261018000000_pipeline.sql`: tables, access rules, realtime. Run once.
-   2. `20261020000000_investor_comments.sql`: dated comments. Safe to run again.
-   3. `20261022000000_rounds.sql`: multiple rounds per organization. Your current round settings become the first round and every existing investor (with comments) moves into it. Safe to run again.
-   4. `20261022100000_investor_database.sql`: each user's private investor database. Investors people already added to pipelines are copied into their databases. Safe to run again.
+2. In **SQL Editor**, run each file in `supabase/migrations/` in name order. Copy and paste **the contents of the file**, not its path.
+   1. `20261018000000_pipeline.sql`: organizations, members, investors, the activity log, access rules and realtime.
+   2. `20261020000000_investor_comments.sql`: dated comments.
+   3. `20261022000000_rounds.sql`: multiple rounds per organization. If you're upgrading, the existing round settings become the first round and every investor moves into it.
+   4. `20261022100000_investor_database.sql`: each user's private investor database. Investors already in pipelines are copied into their creators' databases.
 
-   (CLI alternative: `supabase link --project-ref <ref>` then `supabase db push`, which applies whatever hasn't run yet.)
-   - Already ran the earlier single-organization version? Run the contents of `supabase/scripts/drop_v1_single_tenant.sql` first. It deletes the old pipeline tables and their data.
-3. **URL configuration** (Authentication → URL Configuration): set *Site URL* to the deployed app (GitHub Pages: `https://avoronsky.github.io/venture/`) and add `http://localhost:8087/` to *Redirect URLs*.
-4. **Google sign-in.**
-   1. Google Cloud Console → APIs & Services → Credentials → *Create credentials* → *OAuth client ID* → type *Web application*.
-   2. *Authorized JavaScript origins*: your app origin (e.g. `https://avoronsky.github.io`) and `http://localhost:8087`.
-   3. *Authorized redirect URIs*: `https://<project-ref>.supabase.co/auth/v1/callback` (shown on the Supabase Google provider page).
-   4. Configure the OAuth consent screen (app name, support email; scopes `email`, `profile`, `openid`).
-   5. Supabase → Authentication → Sign In / Providers → **Google**: enable, paste the client ID and secret, save.
-5. **Turn off email sign-in.** The app only offers Google. In Authentication → Sign In / Providers → Email, disable the Email provider so nobody can request sign-in links directly against the API.
+   Migrations 2 to 4 are safe to run more than once.
 
-There is no manual first-owner step: the first person to sign in creates their organization from the app.
+   If you have the Supabase CLI, you can instead run `supabase link --project-ref <ref>` and then `supabase db push`, which applies whatever hasn't run yet.
 
-## Run locally
+   If you ran the very first single-organization version of this app, first run `supabase/scripts/drop_v1_single_tenant.sql`. It deletes the old tables and their data.
+
+### 2. Set up Google sign-in
+
+1. **Create the OAuth client.** In Google Cloud Console, go to **APIs & Services → Credentials → Create credentials → OAuth client ID** and choose *Web application*.
+   - **Authorized redirect URIs:** `https://<project-ref>.supabase.co/auth/v1/callback`. The Supabase Google provider page shows this exact URL.
+   - **Authorized JavaScript origins:** optional. Add your app's origin, such as `https://avoronsky.github.io`, and `http://localhost:8087` if you like.
+2. **Set up the consent screen.** Configure the OAuth consent screen with an app name and support email, and the scopes `email`, `profile` and `openid`.
+3. **Turn on Google in Supabase.** In **Supabase → Authentication → Sign In / Providers → Google**, turn it on, then paste the client ID and secret.
+4. **Turn off email sign-in.** In the same section, turn off the **Email** provider. The app only offers Google, and this stops anyone from requesting sign-in links directly against the API.
+5. **Set the URLs.** In **Supabase → Authentication → URL Configuration**:
+   - Set **Site URL** to the deployed app, for example `https://avoronsky.github.io/venture/`.
+   - Add `http://localhost:8087/` to **Redirect URLs** for local development.
+
+Any Google account can sign in, but a new user sees nothing until they create an organization or someone adds their email to one.
+
+### 3. Publish the app on GitHub Pages
+
+1. **Turn on Pages.** In the GitHub repo, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
+2. **Add the variables.** Under **Settings → Secrets and variables → Actions → Variables**, add these. They're *variables*, not secrets; both values are public.
+   - `VITE_SUPABASE_URL`: from Supabase **Settings → API**.
+   - `VITE_SUPABASE_ANON_KEY`: the publishable (anon) key from the same page.
+   - `VITE_BASE_PATH`: only if the app is served from a path other than `/venture/`. For example, use `/` for a custom domain or a repo named `<user>.github.io`.
+3. **Deploy.** Push to `main`, or run **Actions → Build & Deploy → Run workflow**. The app appears at `https://<user>.github.io/<repo>/`.
+
+The workflow runs type checking, lint, tests and the build on every pull request, and deploys on every push to `main`. Changes to Markdown files, `docs/` or `supabase/` alone don't trigger a deploy. The build writes `404.html` as a copy of `index.html` so links straight to a page, such as `/venture/investors/<id>`, work on Pages.
+
+### Other hosts
+
+Any static host works: Vercel, Netlify, Cloudflare Pages or Firebase Hosting.
+
+- **Build command:** `npm run build`
+- **Output folder:** `dist`
+- **Environment variables:** the same as above
+- **Rewrite rule:** send every path to `index.html`
+
+Add the new URL to Supabase's Site URL and Redirect URLs.
+
+### Run migrations automatically (optional)
+
+`.github/workflows/migrate.yml` runs `supabase db push` whenever files in `supabase/migrations/` change on `main`. It does nothing until you add:
+
+- the variable `SUPABASE_PROJECT_ID`: the project ref
+- the secret `SUPABASE_ACCESS_TOKEN`: create one at supabase.com/dashboard/account/tokens
+- the secret `SUPABASE_DB_PASSWORD`
+
+## Run it locally
 
 ```sh
-cp .env.example .env   # fill in the project URL and publishable/anon key
+cp .env.example .env   # fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 npm install
 npm run dev            # http://localhost:8087
 ```
 
-Checks (the same ones CI runs):
+The local app uses the same Supabase project as the deployed one unless you point it at another.
+
+Run the same checks CI runs:
 
 ```sh
 npm run typecheck
@@ -140,24 +181,54 @@ npm test               # Node's built-in test runner over src/lib/*.test.ts
 npm run build
 ```
 
-## Deploy
+## How it's built
 
-**App (GitHub Pages).** In the repo: **Settings → Pages → Source: GitHub Actions**. Then **Settings → Secrets and variables → Actions → Variables** and add:
+- **React 19 + TypeScript**, built with **Vite** using `@vitejs/plugin-react-swc`.
+- **Tailwind CSS v4.** The theme tokens for light and dark live in `src/index.css`.
+- **shadcn/ui** on Radix, with `lucide-react` icons and `sonner` toasts.
+- **TanStack Query** for server data. Stage moves update the screen right away and roll back if the save fails.
+- **react-hook-form + zod** for forms, **react-router-dom** for routing, and `next-themes` for light and dark mode.
+- **Supabase:**
+  - Postgres with row level security.
+  - Triggers keep the activity log and the investor database up to date.
+  - Functions create organizations and rounds.
+  - Realtime updates refresh every teammate's screen when someone changes the pipeline.
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY` (the publishable/anon key; it's public by design)
-- `VITE_BASE_PATH` only if you serve from somewhere other than `/venture/` (e.g. `/` on a custom domain)
+```
+src/
+  App.tsx                        providers and routes
+  index.css                      Tailwind v4 theme (light and dark)
+  components/AppShell.tsx        sidebar: organization switcher, rounds, investor database
+  components/pipeline/           Board, InvestorTable, InvestorSheet, RaiseMeter, FollowUps,
+                                 RoundSheet, NewRoundForm, DatabaseNameInput (picker from your database)
+  components/database/           MyInvestorSheet
+  components/comments/           CommentTimeline, shared by pipelines and the database
+  components/ui/                 shadcn/ui primitives
+  hooks/                         useAuth, useOrganizations, useOrg, useRounds, useCurrentRound,
+                                 usePipeline (queries, mutations, realtime), useMyInvestors
+  lib/                           pure helpers with unit tests: stages and money, comments, rounds, websites, CSV
+  pages/                         Auth, Home, Organizations, Pipeline, InvestorDatabase, OrgSettings
+supabase/migrations/             schema, triggers, access rules, realtime
+supabase/scripts/                one-off maintenance SQL
+docs/screenshots/                images used in this README
+.github/workflows/               CI, GitHub Pages deploy, optional migrations
+```
 
-`.github/workflows/deploy.yml` runs type check, lint, tests and build on every PR, and deploys on every push to `main`. The build writes `404.html` as a copy of `index.html` so deep links like `/investors/<id>` work on Pages.
+| Page address | Shows |
+|--------------|-------|
+| `/auth` | Sign in with Google |
+| `/` | Your last-used organization, or setup for a new user |
+| `/orgs` | Your organizations, and a form to create a new one |
+| `/o/:orgId` | The last-used round of that organization |
+| `/o/:orgId/r/:roundId` | The pipeline for one round |
+| `/o/:orgId/r/:roundId/investors/:id` | The pipeline with an investor open. This is a link you can share. `new` opens the add form |
+| `/o/:orgId/settings` | Organization name, people with access, leave or delete |
+| `/investors`, `/investors/:id` | Your private investor database |
 
-Any static host works instead (Vercel, Netlify, Cloudflare Pages, Firebase Hosting): build command `npm run build`, output `dist`, same environment variables, and a rewrite of all paths to `index.html`.
+The stage weights for the weighted pipeline are in `STAGES` in `src/lib/pipeline.ts`:
 
-**Database migrations (optional automation).** `.github/workflows/migrate.yml` runs `supabase db push` when files in `supabase/migrations/` change. It stays idle until you add:
+| Target | Contacted | First meeting | Diligence | Partner / IC | Term sheet | Committed | Closed |
+|--------|-----------|---------------|-----------|--------------|------------|-----------|--------|
+| 2%     | 5%        | 10%           | 25%       | 45%          | 75%        | 95%       | 100%   |
 
-- variable `SUPABASE_PROJECT_ID` (the project ref)
-- secret `SUPABASE_ACCESS_TOKEN` (from supabase.com/dashboard/account/tokens)
-- secret `SUPABASE_DB_PASSWORD`
-
-## CSV export
-
-**Export** on the pipeline page downloads every investor in the current organization as a CSV, for board updates or backups. There is no CSV import; add investors in the app.
+Stage changes and newly added investors are written to the activity log by database triggers, so the history stays consistent no matter which client made the change.
