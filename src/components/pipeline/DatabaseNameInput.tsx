@@ -3,6 +3,7 @@ import {BookUser} from "lucide-react";
 import {Input} from "@/components/ui/input";
 import {useMyInvestors} from "@/hooks/useMyInvestors";
 import {formatMoney} from "@/lib/pipeline";
+import {contactsSearchText, contactsSummary} from "@/lib/contacts";
 import type {MyInvestor} from "@/lib/types";
 import {cn} from "@/lib/utils";
 
@@ -25,7 +26,7 @@ export const DatabaseNameInput = forwardRef<HTMLInputElement, DatabaseNameInputP
     const matches = useMemo(() => {
         const q = value.trim().toLowerCase();
         const pool = q
-            ? mine.filter((m) => [m.name, m.contact_name, m.website].join(" ").toLowerCase().includes(q))
+            ? mine.filter((m) => [m.name, contactsSearchText(m.contacts), m.website].join(" ").toLowerCase().includes(q))
                 .sort((a, b) => Number(!a.name.toLowerCase().startsWith(q)) - Number(!b.name.toLowerCase().startsWith(q)))
             : [...mine].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
         return pool.slice(0, 6);
@@ -99,7 +100,7 @@ export const DatabaseNameInput = forwardRef<HTMLInputElement, DatabaseNameInputP
                             className={cn("cursor-pointer rounded-md px-2 py-1.5", i === active && "bg-sunken")}>
                             <span className="block truncate text-sm font-medium">{m.name}</span>
                             <span className="block truncate text-xs text-muted-foreground">
-                                {[m.type, m.contact_name, m.min_check ? `min ${formatMoney(m.min_check)}` : ""].filter(Boolean).join(", ")}
+                                {[m.type, contactsSummary(m.contacts), m.min_check ? `min ${formatMoney(m.min_check)}` : ""].filter(Boolean).join(", ")}
                             </span>
                         </li>
                     ))}

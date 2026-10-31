@@ -1,3 +1,4 @@
+import {contactsSummary} from "@/lib/contacts";
 import {useMemo, useState} from "react";
 import {format} from "date-fns";
 import {ArrowDown, ArrowUp} from "lucide-react";
@@ -62,7 +63,7 @@ export function InvestorTable({investors, onOpen, commentStats}: {investors: Inv
                                   onKeyDown={(e) => e.key === "Enter" && onOpen(r.id)}>
                             <TableCell className="align-top">
                                 <div className="font-semibold">{r.name}</div>
-                                {r.partner && <div className="text-xs text-muted-foreground">{r.partner}</div>}
+                                {r.contacts.length > 0 && <div className="text-xs text-muted-foreground">{contactsSummary(r.contacts)}</div>}
                             </TableCell>
                             <TableCell className="align-top"><StagePill stage={r.stage}/></TableCell>
                             <TableCell className="align-top"><PriorityChip priority={r.priority}/></TableCell>

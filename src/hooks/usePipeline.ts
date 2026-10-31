@@ -5,6 +5,7 @@ import {errorMessage, supabase} from "@/lib/supabase";
 import {STAGE_BY_ID, type StageId} from "@/lib/pipeline";
 import type {Activity, CommentStats, Investor, InvestorInput} from "@/lib/types";
 import {roundKeys} from "@/hooks/useRounds";
+import {normalizeContacts} from "@/lib/contacts";
 
 // Every key starts with the org id so switching organizations never shows another org's cache.
 export const keys = {
@@ -223,5 +224,6 @@ function normalizeInvestor(row: Investor): Investor {
         check_min: Number(row.check_min) || 0,
         check_max: Number(row.check_max) || 0,
         amount: Number(row.amount) || 0,
+        contacts: normalizeContacts(row.contacts),
     };
 }

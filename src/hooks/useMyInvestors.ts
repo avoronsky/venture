@@ -1,3 +1,4 @@
+import {normalizeContacts} from "@/lib/contacts";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {toast} from "sonner";
 import {errorMessage, supabase} from "@/lib/supabase";
@@ -16,7 +17,7 @@ function useUid(): string {
     return session?.user.id ?? "";
 }
 
-const normalize = (r: MyInvestor): MyInvestor => ({...r, min_check: Number(r.min_check) || 0});
+const normalize = (r: MyInvestor): MyInvestor => ({...r, min_check: Number(r.min_check) || 0, contacts: normalizeContacts(r.contacts)});
 
 export function useMyInvestors() {
     const uid = useUid();

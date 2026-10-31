@@ -1,3 +1,4 @@
+import {contactsSummary} from "@/lib/contacts";
 import {type DragEvent, useState} from "react";
 import {cn} from "@/lib/utils";
 import {checkRange, formatMoney, STAGES, type StageId} from "@/lib/pipeline";
@@ -82,8 +83,8 @@ export function Board({investors, showPassed, canEdit, onOpen, onMove, commentSt
                                             <PriorityChip priority={inv.priority}/>
                                             <span className="min-w-0 flex-1">
                                                 <span className="block font-semibold leading-snug [overflow-wrap:anywhere]">{inv.name}</span>
-                                                {(inv.partner || inv.type) && (
-                                                    <span className="block truncate text-[12.5px] text-muted-foreground">{inv.partner || inv.type}</span>
+                                                {(inv.contacts.length > 0 || inv.type) && (
+                                                    <span className="block truncate text-[12.5px] text-muted-foreground">{contactsSummary(inv.contacts) || inv.type}</span>
                                                 )}
                                             </span>
                                         </span>

@@ -1,3 +1,4 @@
+import {contactsSearchText} from "@/lib/contacts";
 import {useMemo, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import {format} from "date-fns";
@@ -58,7 +59,7 @@ export default function Pipeline() {
             (showPassed || r.stage !== "passed") &&
             (priority === "all" || r.priority === priority) &&
             (type === "all" || r.type === type) &&
-            (!q || [r.name, r.website, r.partner, r.email, r.via, r.notes, r.next_step, r.geo].join(" ").toLowerCase().includes(q)));
+            (!q || [r.name, r.website, contactsSearchText(r.contacts), r.via, r.notes, r.next_step, r.geo].join(" ").toLowerCase().includes(q)));
     }, [investors, query, priority, type, showPassed]);
 
     const isNew = investorId === "new";

@@ -26,8 +26,11 @@ import {InvestorComments} from "./InvestorComments";
 import {DatabaseNameInput} from "./DatabaseNameInput";
 import {INVESTOR_TYPES, MANDATES, parseMoney, PRIORITIES, STAGE_IDS, STAGES} from "@/lib/pipeline";
 import type {Investor, InvestorInput, MyInvestor} from "@/lib/types";
-import {linkedinHref, websiteHref} from "@/lib/websites";
-import {ContactLinks} from "@/components/ContactLinks";
+import {websiteHref} from "@/lib/websites";
+import {mergeContacts} from "@/lib/contacts";
+import {InvestorLinks} from "@/components/contacts/InvestorLinks";
+import {ContactsEditor} from "@/components/contacts/ContactsEditor";
+import {contactsSchema, fromContactDrafts, toContactDrafts} from "@/components/contacts/contactsForm";
 import {cn} from "@/lib/utils";
 import {useOrg} from "@/hooks/useOrg";
 import {useCurrentRound} from "@/hooks/useCurrentRound";
@@ -37,9 +40,7 @@ const money = z.string().trim().refine((v) => v === "" || parseMoney(v) > 0, "Us
 const schema = z.object({
     name: z.string().trim().min(1, "Add the fund or investor name"),
     website: z.string().trim().max(500).refine((v) => v === "" || websiteHref(v) !== null, "Use an address like fund.vc"),
-    partner: z.string().trim(),
-    email: z.union([z.literal(""), z.string().trim().email("Enter a valid email")]),
-    linkedin: z.string().trim().max(500).refine((v) => v === "" || linkedinHref(v) !== null, "Paste a linkedin.com link"),
+    contacts: contactsSchema,
     type: z.string(),
     geo: z.string().trim(),
     mandate: z.enum(["yes", "open", "no", "unknown"]),
@@ -63,9 +64,7 @@ function toForm(inv?: Investor): FormValues {
     return {
         name: inv?.name ?? "",
         website: inv?.website ?? "",
-        partner: inv?.partner ?? "",
-        email: inv?.email ?? "",
-        linkedin: inv?.linkedin ?? "",
+        contacts: toContactDrafts(inv?.contacts ?? []),
         type: inv?.type || "VC",
         geo: inv?.geo ?? "",
         mandate: inv?.mandate ?? "unknown",
@@ -86,6 +85,7 @@ function toForm(inv?: Investor): FormValues {
 function toInput(v: FormValues): InvestorInput {
     return {
         ...v,
+        contacts: fromContactDrafts(v.contacts),
         check_min: parseMoney(v.check_min),
         check_max: parseMoney(v.check_max),
         amount: parseMoney(v.amount),
@@ -112,7 +112,7 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
     const commentCount = investor ? stats?.get(investor.id)?.comment_count ?? 0 : 0;
     const [tab, setTab] = useState<"comments" | "details">("comments");
     const showing = isNew ? "details" : tab;
-    const {register, handleSubmit, control, reset, setValue, watch, formState: {errors, isDirty}} = useForm<FormValues>({
+    const {register, handleSubmit, control, reset, setValue, getValues, watch, formState: {errors, isDirty}} = useForm<FormValues>({
         resolver: zodResolver(schema),
         defaultValues: toForm(investor),
     });
@@ -137,10 +137,8 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
         const opts = {shouldDirty: true, shouldValidate: true};
         setValue("name", m.name, opts);
         setValue("type", m.type || "VC", opts);
-        if (m.contact_name) setValue("partner", m.contact_name, opts);
         if (m.website) setValue("website", m.website, opts);
-        if (m.contact_email) setValue("email", m.contact_email, opts);
-        if (m.contact_linkedin) setValue("linkedin", m.contact_linkedin, opts);
+        if (m.contacts.length) setValue("contacts", toContactDrafts(mergeContacts(fromContactDrafts(getValues("contacts")), m.contacts)), opts);
         if (m.min_check) setValue("check_min", String(m.min_check), opts);
         setFilledFrom(m.name);
     };
@@ -155,7 +153,7 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
                 <SheetHeader className="border-b px-6 py-4 text-left">
                     <SheetTitle className="text-xl [overflow-wrap:anywhere]">{isNew ? "Add investor" : investor.name}</SheetTitle>
                     <SheetDescription>{isNew ? "Add a fund, angel or strategic to the pipeline." : `${investor.type || "Investor"}, ${STAGES.find((s) => s.id === investor.stage)?.name.toLowerCase()}`}</SheetDescription>
-                    {!isNew && <ContactLinks website={investor.website} email={investor.email} linkedin={investor.linkedin} className="pt-1"/>}
+                    {!isNew && <InvestorLinks website={investor.website} contacts={investor.contacts} className="pt-1.5"/>}
                     {!isNew && (
                         <div className="-mb-4 mt-3 flex gap-5" role="tablist" aria-label="Investor">
                             {([["comments", "Comments"], ["details", "Details"]] as const).map(([value, label]) => (
@@ -212,13 +210,13 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
                             <Field label="Intro via"><Input {...register("via")} placeholder="Warm intro source"/></Field>
                         </Section>
 
-                        <Section title="Contact person">
-                            <Field label="Name"><Input {...register("partner")} placeholder="Partner or associate"/></Field>
-                            <Field label="Email" error={errors.email?.message}><Input type="email" {...register("email")} placeholder="name@fund.vc"/></Field>
-                            <Field label="LinkedIn" error={errors.linkedin?.message} full>
-                                <Input {...register("linkedin")} placeholder="linkedin.com/in/name" inputMode="url"/>
-                            </Field>
-                        </Section>
+                        <section className="flex flex-col gap-3">
+                            <h3 className="text-sm font-semibold">Contacts</h3>
+                            <Controller control={control} name="contacts" render={({field}) => (
+                                <ContactsEditor value={field.value} onChange={field.onChange} disabled={!canEdit}
+                                                errors={errors.contacts as Parameters<typeof ContactsEditor>[0]["errors"]}/>
+                            )}/>
+                        </section>
 
                         <Section title="Deal">
                             <Field label="Stage">

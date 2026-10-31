@@ -11,7 +11,9 @@ import {Skeleton} from "@/components/ui/skeleton";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {formatMoney} from "@/lib/pipeline";
-import {linkedinHref, websiteHref, websiteLabel} from "@/lib/websites";
+import {websiteHref, websiteLabel} from "@/lib/websites";
+import {contactLabel, contactsSearchText} from "@/lib/contacts";
+import {ContactLinks} from "@/components/contacts/InvestorLinks";
 import type {CommentStats, MyInvestor} from "@/lib/types";
 
 type SortKey = "name" | "type" | "contact" | "min_check" | "comments";
@@ -27,7 +29,7 @@ const COLUMNS: {key: SortKey; label: string; numeric?: boolean}[] = [
 function sortValue(r: MyInvestor, k: SortKey, stats?: Map<string, CommentStats>): string | number {
     if (k === "min_check") return r.min_check;
     if (k === "comments") return stats?.get(r.id)?.last_comment_on ?? "";
-    if (k === "contact") return (r.contact_name || r.contact_email).toLowerCase() || "￿";
+    if (k === "contact") return (r.contacts[0] ? contactLabel(r.contacts[0]) : "").toLowerCase() || "￿";
     return String(r[k] ?? "").toLowerCase() || "￿";
 }
 
@@ -46,7 +48,7 @@ export default function InvestorDatabase() {
         const q = query.trim().toLowerCase();
         return investors
             .filter((r) => (type === "all" || r.type === type) &&
-                (!q || [r.name, r.contact_name, r.contact_email, r.contact_linkedin, r.website].join(" ").toLowerCase().includes(q)))
+                (!q || [r.name, contactsSearchText(r.contacts), r.website].join(" ").toLowerCase().includes(q)))
             .sort((a, b) => {
                 const x = sortValue(a, sort.key, stats), y = sortValue(b, sort.key, stats);
                 return (x < y ? -1 : x > y ? 1 : 0) * sort.dir;
@@ -139,22 +141,17 @@ export default function InvestorDatabase() {
                                                 </TableCell>
                                                 <TableCell className="align-top">{r.type}</TableCell>
                                                 <TableCell className="align-top">
-                                                    {r.contact_name && <div>{r.contact_name}</div>}
-                                                    <div className="flex flex-wrap gap-x-3 text-xs">
-                                                        {r.contact_email && (
-                                                            <a href={`mailto:${r.contact_email}`} onClick={(e) => e.stopPropagation()}
-                                                               className="text-muted-foreground hover:text-foreground hover:underline">
-                                                                {r.contact_email}
-                                                            </a>
-                                                        )}
-                                                        {linkedinHref(r.contact_linkedin) && (
-                                                            <a href={linkedinHref(r.contact_linkedin)!} target="_blank" rel="noreferrer noopener"
-                                                               onClick={(e) => e.stopPropagation()}
-                                                               className="text-muted-foreground hover:text-foreground hover:underline">
-                                                                LinkedIn
-                                                            </a>
-                                                        )}
-                                                    </div>
+                                                    {r.contacts[0] && (
+                                                        <>
+                                                            {r.contacts[0].name && (
+                                                                <div>{r.contacts[0].name}{r.contacts[0].role && <span className="text-muted-foreground">, {r.contacts[0].role}</span>}</div>
+                                                            )}
+                                                            <ContactLinks contact={r.contacts[0]} className="text-xs"/>
+                                                            {r.contacts.length > 1 && (
+                                                                <div className="text-xs text-muted-foreground">+{r.contacts.length - 1} more</div>
+                                                            )}
+                                                        </>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell className="tabular whitespace-nowrap text-right align-top">{r.min_check ? formatMoney(r.min_check) : ""}</TableCell>
                                                 <TableCell className="align-top"><CommentCount stats={stats?.get(r.id)}/></TableCell>

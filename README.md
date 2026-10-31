@@ -38,7 +38,7 @@ Below the meter, two views of the same investors:
 Click an investor to open its panel. It has two tabs:
 
 - **Comments:** a dated timeline of notes from calls, emails and meetings, with stage changes mixed in so you can see how the deal moved.
-- **Details:** the investor's website, the contact person with their email and LinkedIn page, check size, mandate, intro source, next step, and so on. The website, email and LinkedIn also show as links at the top of the panel.
+- **Details:** the investor's website, its contacts, check size, mandate, intro source, next step, and so on. An investor can have any number of contacts (up to 20), each with a name, role, email and LinkedIn page. The first one is the main contact shown on board cards. The website and every contact's email and LinkedIn also show as links at the top of the panel.
 
 How comments behave:
 
@@ -48,14 +48,14 @@ How comments behave:
 
 ![Investor panel with comments](docs/screenshots/investor-comments.png)
 
-![Investor details: website and contact person with email and LinkedIn](docs/screenshots/investor-details.png)
+![Investor details: website and several contacts, each with role, email and LinkedIn](docs/screenshots/investor-details.png)
 
 ### Your private investor database
 
-**Investor database** in the sidebar is your own list of investors that you keep across companies and rounds. Each entry has a name, type, website, contact person with their email and LinkedIn page, minimum check, and comments. **Only you can see it.** Teammates and organization owners can't.
+**Investor database** in the sidebar is your own list of investors that you keep across companies and rounds. Each entry has a name, type, website, minimum check, contacts (each with a name, role, email and LinkedIn page), and comments. **Only you can see it.** Teammates and organization owners can't.
 
-- **Saved automatically.** Every investor you add to a pipeline, including those copied into a new round, is saved to your database if it isn't there yet. Investors are matched by name, ignoring upper and lower case. An investor that's already there isn't overwritten, but a missing website or LinkedIn page is filled in.
-- **Reusable.** When you add an investor to a pipeline, start typing the name and pick a match from your database. The type, website, contact person, email, LinkedIn and minimum check fill in for you.
+- **Saved automatically.** Every investor you add to a pipeline, including those copied into a new round, is saved to your database if it isn't there yet. Investors are matched by name, ignoring upper and lower case. An investor that's already there isn't overwritten, but new contacts and a missing website are added to it. Adding contacts to a pipeline investor later also adds them to your entry for that investor. Contacts are matched by email, or by name when there's no email.
+- **Reusable.** When you add an investor to a pipeline, start typing the name and pick a match from your database. The type, website, contacts and minimum check fill in for you.
 - **Separate comments.** Database comments are your private long-term notes. Pipeline comments are shared with the team and belong to one round.
 - Removing an investor from your database doesn't remove it from any pipeline.
 
@@ -113,9 +113,10 @@ You need a Supabase project, a Google Cloud OAuth client and somewhere to host s
    2. `20261020000000_investor_comments.sql`: dated comments.
    3. `20261022000000_rounds.sql`: multiple rounds per organization. If you're upgrading, the existing round settings become the first round and every investor moves into it.
    4. `20261022100000_investor_database.sql`: each user's private investor database. Investors already in pipelines are copied into their creators' databases.
-   5. `20261031000000_websites_and_linkedin.sql`: a website for every pipeline investor and a LinkedIn page for every contact person.
+   5. `20261031000000_websites_and_linkedin.sql`: a website for every pipeline investor and a LinkedIn page for the contact person.
+   6. `20261031100000_multiple_contacts.sql`: several contacts per investor. Each investor's existing contact becomes its first contact.
 
-   Migrations 2 to 5 are safe to run more than once.
+   Migrations 2 to 6 are safe to run more than once.
 
    If you have the Supabase CLI, you can instead run `supabase link --project-ref <ref>` and then `supabase db push`, which applies whatever hasn't run yet.
 
@@ -206,10 +207,11 @@ src/
                                  RoundSheet, NewRoundForm, DatabaseNameInput (picker from your database)
   components/database/           MyInvestorSheet
   components/comments/           CommentTimeline, shared by pipelines and the database
+  components/contacts/           ContactsEditor and InvestorLinks, shared by pipelines and the database
   components/ui/                 shadcn/ui primitives
   hooks/                         useAuth, useOrganizations, useOrg, useRounds, useCurrentRound,
                                  usePipeline (queries, mutations, realtime), useMyInvestors
-  lib/                           pure helpers with unit tests: stages and money, comments, rounds, websites, CSV
+  lib/                           pure helpers with unit tests: stages and money, comments, contacts, rounds, websites, CSV
   pages/                         Auth, Home, Organizations, Pipeline, InvestorDatabase, OrgSettings
 supabase/migrations/             schema, triggers, access rules, realtime
 supabase/scripts/                one-off maintenance SQL

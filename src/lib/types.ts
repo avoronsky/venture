@@ -1,4 +1,7 @@
 import type {Mandate, Priority, StageId} from "./pipeline";
+import type {Contact} from "./contacts";
+
+export type {Contact};
 
 export type Role = "owner" | "editor" | "viewer";
 
@@ -28,10 +31,8 @@ export interface Investor {
     round_id: string;
     name: string;
     website: string;
-    /** The contact person */
-    partner: string;
-    email: string;
-    linkedin: string;
+    /** People at the investor; the first one is shown on cards. */
+    contacts: Contact[];
     type: string;
     stage: StageId;
     priority: Priority;
@@ -98,15 +99,13 @@ export interface MyInvestor {
     name: string;
     type: string;
     website: string;
-    contact_name: string;
-    contact_email: string;
-    contact_linkedin: string;
+    contacts: Contact[];
     min_check: number;
     created_at: string;
     updated_at: string;
 }
 
-export type MyInvestorInput = Pick<MyInvestor, "name" | "type" | "website" | "contact_name" | "contact_email" | "contact_linkedin" | "min_check">;
+export type MyInvestorInput = Pick<MyInvestor, "name" | "type" | "website" | "contacts" | "min_check">;
 
 export interface MyInvestorComment {
     id: number;
