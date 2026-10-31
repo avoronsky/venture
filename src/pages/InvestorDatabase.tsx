@@ -11,7 +11,7 @@ import {Skeleton} from "@/components/ui/skeleton";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {formatMoney} from "@/lib/pipeline";
-import {websiteHref, websiteLabel} from "@/lib/websites";
+import {linkedinHref, websiteHref, websiteLabel} from "@/lib/websites";
 import type {CommentStats, MyInvestor} from "@/lib/types";
 
 type SortKey = "name" | "type" | "contact" | "min_check" | "comments";
@@ -46,7 +46,7 @@ export default function InvestorDatabase() {
         const q = query.trim().toLowerCase();
         return investors
             .filter((r) => (type === "all" || r.type === type) &&
-                (!q || [r.name, r.contact_name, r.contact_email, r.website].join(" ").toLowerCase().includes(q)))
+                (!q || [r.name, r.contact_name, r.contact_email, r.contact_linkedin, r.website].join(" ").toLowerCase().includes(q)))
             .sort((a, b) => {
                 const x = sortValue(a, sort.key, stats), y = sortValue(b, sort.key, stats);
                 return (x < y ? -1 : x > y ? 1 : 0) * sort.dir;
@@ -140,12 +140,21 @@ export default function InvestorDatabase() {
                                                 <TableCell className="align-top">{r.type}</TableCell>
                                                 <TableCell className="align-top">
                                                     {r.contact_name && <div>{r.contact_name}</div>}
-                                                    {r.contact_email && (
-                                                        <a href={`mailto:${r.contact_email}`} onClick={(e) => e.stopPropagation()}
-                                                           className="text-xs text-muted-foreground hover:text-foreground hover:underline">
-                                                            {r.contact_email}
-                                                        </a>
-                                                    )}
+                                                    <div className="flex flex-wrap gap-x-3 text-xs">
+                                                        {r.contact_email && (
+                                                            <a href={`mailto:${r.contact_email}`} onClick={(e) => e.stopPropagation()}
+                                                               className="text-muted-foreground hover:text-foreground hover:underline">
+                                                                {r.contact_email}
+                                                            </a>
+                                                        )}
+                                                        {linkedinHref(r.contact_linkedin) && (
+                                                            <a href={linkedinHref(r.contact_linkedin)!} target="_blank" rel="noreferrer noopener"
+                                                               onClick={(e) => e.stopPropagation()}
+                                                               className="text-muted-foreground hover:text-foreground hover:underline">
+                                                                LinkedIn
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="tabular whitespace-nowrap text-right align-top">{r.min_check ? formatMoney(r.min_check) : ""}</TableCell>
                                                 <TableCell className="align-top"><CommentCount stats={stats?.get(r.id)}/></TableCell>

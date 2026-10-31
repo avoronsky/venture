@@ -2,7 +2,7 @@ import {toCSV} from "./csv";
 import {STAGE_BY_ID, todayISO} from "./pipeline";
 import type {Investor} from "./types";
 
-const EXPORT_COLS: (keyof Investor)[] = ["name", "partner", "email", "type", "stage", "priority", "mandate", "check_min", "check_max", "amount", "can_lead", "via", "geo", "next_step", "next_date", "last_contact", "notes"];
+const EXPORT_COLS: (keyof Investor)[] = ["name", "website", "partner", "email", "linkedin", "type", "stage", "priority", "mandate", "check_min", "check_max", "amount", "can_lead", "via", "geo", "next_step", "next_date", "last_contact", "notes"];
 
 export function downloadInvestorsCSV(investors: Investor[], orgName: string) {
     const csv = toCSV(EXPORT_COLS as string[], investors.map((r) => EXPORT_COLS.map((c) => (c === "stage" ? STAGE_BY_ID[r.stage].name : r[c]))));

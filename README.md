@@ -38,7 +38,7 @@ Below the meter, two views of the same investors:
 Click an investor to open its panel. It has two tabs:
 
 - **Comments:** a dated timeline of notes from calls, emails and meetings, with stage changes mixed in so you can see how the deal moved.
-- **Details:** contact person, check size, mandate, intro source, next step, and so on.
+- **Details:** the investor's website, the contact person with their email and LinkedIn page, check size, mandate, intro source, next step, and so on. The website, email and LinkedIn also show as links at the top of the panel.
 
 How comments behave:
 
@@ -48,12 +48,14 @@ How comments behave:
 
 ![Investor panel with comments](docs/screenshots/investor-comments.png)
 
+![Investor details: website and contact person with email and LinkedIn](docs/screenshots/investor-details.png)
+
 ### Your private investor database
 
-**Investor database** in the sidebar is your own list of investors that you keep across companies and rounds. Each entry has a name, type, website, contact person and email, minimum check, and comments. **Only you can see it.** Teammates and organization owners can't.
+**Investor database** in the sidebar is your own list of investors that you keep across companies and rounds. Each entry has a name, type, website, contact person with their email and LinkedIn page, minimum check, and comments. **Only you can see it.** Teammates and organization owners can't.
 
-- **Saved automatically.** Every investor you add to a pipeline, including those copied into a new round, is saved to your database if it isn't there yet. Investors are matched by name, ignoring upper and lower case.
-- **Reusable.** When you add an investor to a pipeline, start typing the name and pick a match from your database. The type, contact person, email and minimum check fill in for you.
+- **Saved automatically.** Every investor you add to a pipeline, including those copied into a new round, is saved to your database if it isn't there yet. Investors are matched by name, ignoring upper and lower case. An investor that's already there isn't overwritten, but a missing website or LinkedIn page is filled in.
+- **Reusable.** When you add an investor to a pipeline, start typing the name and pick a match from your database. The type, website, contact person, email, LinkedIn and minimum check fill in for you.
 - **Separate comments.** Database comments are your private long-term notes. Pipeline comments are shared with the team and belong to one round.
 - Removing an investor from your database doesn't remove it from any pipeline.
 
@@ -111,8 +113,9 @@ You need a Supabase project, a Google Cloud OAuth client and somewhere to host s
    2. `20261020000000_investor_comments.sql`: dated comments.
    3. `20261022000000_rounds.sql`: multiple rounds per organization. If you're upgrading, the existing round settings become the first round and every investor moves into it.
    4. `20261022100000_investor_database.sql`: each user's private investor database. Investors already in pipelines are copied into their creators' databases.
+   5. `20261031000000_websites_and_linkedin.sql`: a website for every pipeline investor and a LinkedIn page for every contact person.
 
-   Migrations 2 to 4 are safe to run more than once.
+   Migrations 2 to 5 are safe to run more than once.
 
    If you have the Supabase CLI, you can instead run `supabase link --project-ref <ref>` and then `supabase db push`, which applies whatever hasn't run yet.
 

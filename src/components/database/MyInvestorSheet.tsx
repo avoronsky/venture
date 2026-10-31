@@ -21,7 +21,8 @@ import {
 import {CommentTimeline} from "@/components/comments/CommentTimeline";
 import {useDeleteMyInvestor, useMyCommentMutations, useMyCommentStats, useMyInvestorComments, useSaveMyInvestor} from "@/hooks/useMyInvestors";
 import {INVESTOR_TYPES, parseMoney} from "@/lib/pipeline";
-import {websiteHref} from "@/lib/websites";
+import {linkedinHref, websiteHref} from "@/lib/websites";
+import {ContactLinks} from "@/components/ContactLinks";
 import type {MyInvestor, MyInvestorInput} from "@/lib/types";
 import {cn} from "@/lib/utils";
 
@@ -31,6 +32,7 @@ const schema = z.object({
     website: z.string().trim().max(500).refine((v) => v === "" || websiteHref(v) !== null, "Use an address like fund.vc"),
     contact_name: z.string().trim().max(200),
     contact_email: z.union([z.literal(""), z.string().trim().email("Enter a valid email")]),
+    contact_linkedin: z.string().trim().max(500).refine((v) => v === "" || linkedinHref(v) !== null, "Paste a linkedin.com link"),
     min_check: z.string().trim().refine((v) => v === "" || parseMoney(v) > 0, "Use a number like 250K or 1.5M"),
 });
 type FormValues = z.infer<typeof schema>;
@@ -41,11 +43,12 @@ const toForm = (inv?: MyInvestor): FormValues => ({
     website: inv?.website ?? "",
     contact_name: inv?.contact_name ?? "",
     contact_email: inv?.contact_email ?? "",
+    contact_linkedin: inv?.contact_linkedin ?? "",
     min_check: inv?.min_check ? inv.min_check.toLocaleString("en-US") : "",
 });
 
 const toInput = (v: FormValues): MyInvestorInput => ({
-    name: v.name, type: v.type, website: v.website, contact_name: v.contact_name, contact_email: v.contact_email,
+    name: v.name, type: v.type, website: v.website, contact_name: v.contact_name, contact_email: v.contact_email, contact_linkedin: v.contact_linkedin,
     min_check: parseMoney(v.min_check),
 });
 
@@ -91,6 +94,7 @@ export function MyInvestorSheet({open, investor, onClose, onCreated}: MyInvestor
                 <SheetHeader className="border-b px-6 py-4 text-left">
                     <SheetTitle className="text-xl [overflow-wrap:anywhere]">{isNew ? "Add to your database" : investor.name}</SheetTitle>
                     <SheetDescription>{isNew ? "Only you can see your investor database." : [investor.type, investor.contact_name].filter(Boolean).join(", ")}</SheetDescription>
+                    {!isNew && <ContactLinks website={investor.website} email={investor.contact_email} linkedin={investor.contact_linkedin} className="pt-1"/>}
                     {!isNew && (
                         <div className="-mb-4 mt-3 flex gap-5" role="tablist" aria-label="Investor">
                             {([["comments", "Comments"], ["details", "Details"]] as const).map(([value, label]) => (
@@ -130,6 +134,9 @@ export function MyInvestorSheet({open, investor, onClose, onCreated}: MyInvestor
                         <Field label="Contact person"><Input {...register("contact_name")} placeholder="Partner or associate"/></Field>
                         <Field label="Contact email" error={errors.contact_email?.message}>
                             <Input type="email" {...register("contact_email")} placeholder="name@fund.vc"/>
+                        </Field>
+                        <Field label="Contact LinkedIn" error={errors.contact_linkedin?.message}>
+                            <Input {...register("contact_linkedin")} placeholder="linkedin.com/in/name" inputMode="url"/>
                         </Field>
                         <Field label="Minimum check (USD)" error={errors.min_check?.message}>
                             <Input inputMode="decimal" {...register("min_check")} placeholder="250K"/>

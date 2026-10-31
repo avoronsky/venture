@@ -27,8 +27,11 @@ export interface Investor {
     org_id: string;
     round_id: string;
     name: string;
+    website: string;
+    /** The contact person */
     partner: string;
     email: string;
+    linkedin: string;
     type: string;
     stage: StageId;
     priority: Priority;
@@ -97,12 +100,13 @@ export interface MyInvestor {
     website: string;
     contact_name: string;
     contact_email: string;
+    contact_linkedin: string;
     min_check: number;
     created_at: string;
     updated_at: string;
 }
 
-export type MyInvestorInput = Pick<MyInvestor, "name" | "type" | "website" | "contact_name" | "contact_email" | "min_check">;
+export type MyInvestorInput = Pick<MyInvestor, "name" | "type" | "website" | "contact_name" | "contact_email" | "contact_linkedin" | "min_check">;
 
 export interface MyInvestorComment {
     id: number;
