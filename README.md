@@ -96,10 +96,10 @@ All of these rules are enforced in the database with row level security, not onl
 | Piece | Where | How it gets updated |
 |-------|-------|---------------------|
 | Web app | GitHub Pages: <https://avoronsky.github.io/venture/> | Automatically on every push to `main` (`.github/workflows/deploy.yml`) |
-| Sign-in and database | A Supabase project: Postgres, Google sign-in and realtime updates | SQL migrations in `supabase/migrations/`, run by hand in the SQL Editor or by the optional workflow |
+| Sign-in and database | A Supabase project: Postgres, Google sign-in and realtime updates | The schema in `supabase/migrations/`, run by hand in the SQL Editor or by the optional workflow |
 | Source | <https://github.com/avoronsky/venture> | |
 
-The web app is a static site. All data lives in Supabase, and the browser talks to Supabase directly. The Supabase key in the app is the public *anon* key: access is controlled by the row level security rules in the migrations, not by keeping that key secret.
+The web app is a static site. All data lives in Supabase, and the browser talks to Supabase directly. The Supabase key in the app is the public *anon* key: access is controlled by the row level security rules in the schema, not by keeping that key secret.
 
 ## Deploy your own copy
 
@@ -108,19 +108,9 @@ You need a Supabase project, a Google Cloud OAuth client and somewhere to host s
 ### 1. Create the database
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run each file in `supabase/migrations/` in name order. Copy and paste **the contents of the file**, not its path.
-   1. `20261018000000_pipeline.sql`: organizations, members, investors, the activity log, access rules and realtime.
-   2. `20261020000000_investor_comments.sql`: dated comments.
-   3. `20261022000000_rounds.sql`: multiple rounds per organization. If you're upgrading, the existing round settings become the first round and every investor moves into it.
-   4. `20261022100000_investor_database.sql`: each user's private investor database. Investors already in pipelines are copied into their creators' databases.
-   5. `20261031000000_websites_and_linkedin.sql`: a website for every pipeline investor and a LinkedIn page for the contact person.
-   6. `20261031100000_multiple_contacts.sql`: several contacts per investor. Each investor's existing contact becomes its first contact.
+2. In **SQL Editor**, paste **the contents of** `supabase/migrations/20261031200000_schema.sql` (not its path) and run it. This one file creates everything: tables, access rules, triggers and realtime.
 
-   Migrations 2 to 6 are safe to run more than once.
-
-   If you have the Supabase CLI, you can instead run `supabase link --project-ref <ref>` and then `supabase db push`, which applies whatever hasn't run yet.
-
-   If you ran the very first single-organization version of this app, first run `supabase/scripts/drop_v1_single_tenant.sql`. It deletes the old tables and their data.
+   If you have the Supabase CLI, you can instead run `supabase link --project-ref <ref>` and then `supabase db push`.
 
 ### 2. Set up Google sign-in
 
@@ -158,13 +148,24 @@ Any static host works: Vercel, Netlify, Cloudflare Pages or Firebase Hosting.
 
 Add the new URL to Supabase's Site URL and Redirect URLs.
 
+### Changing the database later
+
+Don't edit the schema file once a project has run it. Add a new file to `supabase/migrations/` whose name starts with a later timestamp, for example `20261115000000_add_tags.sql`, containing only the change. Then run it in the SQL Editor, or let the workflow below apply it.
+
 ### Run migrations automatically (optional)
 
-`.github/workflows/migrate.yml` runs `supabase db push` whenever files in `supabase/migrations/` change on `main`. It does nothing until you add:
+`.github/workflows/migrate.yml` runs `supabase db push` whenever files in `supabase/migrations/` change on `main`. It applies only the files the project hasn't run yet. It does nothing until you add:
 
 - the variable `SUPABASE_PROJECT_ID`: the project ref
 - the secret `SUPABASE_ACCESS_TOKEN`: create one at supabase.com/dashboard/account/tokens
 - the secret `SUPABASE_DB_PASSWORD`
+
+If your database was set up by hand in the SQL Editor, first tell the CLI that the schema is already in place, or the first push will try to create everything again and fail:
+
+```sh
+supabase link --project-ref <ref>
+supabase migration repair --status applied 20261031200000
+```
 
 ## Run it locally
 
@@ -213,8 +214,7 @@ src/
                                  usePipeline (queries, mutations, realtime), useMyInvestors
   lib/                           pure helpers with unit tests: stages and money, comments, contacts, rounds, websites, CSV
   pages/                         Auth, Home, Organizations, Pipeline, InvestorDatabase, OrgSettings
-supabase/migrations/             schema, triggers, access rules, realtime
-supabase/scripts/                one-off maintenance SQL
+supabase/migrations/             the database schema (tables, triggers, access rules, realtime), then any later changes
 docs/screenshots/                images used in this README
 .github/workflows/               CI, GitHub Pages deploy, optional migrations
 ```
