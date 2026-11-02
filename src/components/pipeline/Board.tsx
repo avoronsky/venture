@@ -25,6 +25,9 @@ export function Board({investors, showPassed, canEdit, onOpen, onMove, commentSt
     const onDrop = (e: DragEvent, stage: StageId) => {
         e.preventDefault();
         setOver(null);
+        // Clear it here too: the move re-renders the card in its new column, so the original element
+        // is gone and its dragend never fires.
+        setDragging(null);
         const id = e.dataTransfer.getData("text/plain");
         const inv = investors.find((i) => i.id === id);
         if (inv && inv.stage !== stage) onMove(id, stage);
