@@ -130,7 +130,7 @@ export function MyInvestorSheet({open, investor, onClose, onCreated}: MyInvestor
                         <Field label="Website" error={errors.website?.message}>
                             <Input {...register("website")} placeholder="fund.vc" inputMode="url"/>
                         </Field>
-                        <Field label="Minimum check (USD)" error={errors.min_check?.message}>
+                        <Field label="Minimum check" error={errors.min_check?.message}>
                             <Input inputMode="decimal" {...register("min_check")} placeholder="250K"/>
                         </Field>
                     </div>

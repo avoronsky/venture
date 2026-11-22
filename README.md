@@ -67,6 +67,8 @@ How comments behave:
 
 People sign in with Google. A new user belongs to no organization and is asked to create one; they become its owner. To share, an owner adds a teammate's email address in **People & settings** and gives them a role. The organization appears for that person the next time they sign in with that Google account. No invitation email is sent, so send them the app link yourself.
 
+Each organization has a **main currency** (default USD), set by an owner in **People & settings**. Every round in the organization shows targets, caps, check sizes and amounts in it. Changing it relabels figures; it doesn't convert them. Your personal investor database is shared across organizations, so its minimum checks are shown without a currency symbol.
+
 | Role   | Can see the pipeline | Can change investors, comments and rounds | Can manage people, rename or delete the organization |
 |--------|----------------------|-------------------------------------------|------------------------------------------------------|
 | Owner  | ✓                    | ✓                                         | ✓                                                    |
@@ -227,7 +229,7 @@ docs/screenshots/                images used in this README
 | `/o/:orgId` | The last-used round of that organization |
 | `/o/:orgId/r/:roundId` | The pipeline for one round |
 | `/o/:orgId/r/:roundId/investors/:id` | The pipeline with an investor open. This is a link you can share. `new` opens the add form |
-| `/o/:orgId/settings` | Organization name, people with access, leave or delete |
+| `/o/:orgId/settings` | Organization name, main currency (used by every round), people with access, leave or delete |
 | `/investors`, `/investors/:id` | Your private investor database |
 
 The stage weights for the weighted pipeline are in `STAGES` in `src/lib/pipeline.ts`:

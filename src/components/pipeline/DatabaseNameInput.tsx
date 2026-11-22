@@ -2,10 +2,10 @@ import {forwardRef, type InputHTMLAttributes, type KeyboardEvent, useId, useMemo
 import {BookUser} from "lucide-react";
 import {Input} from "@/components/ui/input";
 import {useMyInvestors} from "@/hooks/useMyInvestors";
-import {formatMoney} from "@/lib/pipeline";
 import {contactsSearchText, contactsSummary} from "@/lib/contacts";
 import type {MyInvestor} from "@/lib/types";
 import {cn} from "@/lib/utils";
+import {useMoney} from "@/hooks/useMoney";
 
 interface DatabaseNameInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "onSelect"> {
     value: string;
@@ -23,6 +23,7 @@ export const DatabaseNameInput = forwardRef<HTMLInputElement, DatabaseNameInputP
     const [active, setActive] = useState(0);
     const listId = useId();
 
+    const money = useMoney();
     const matches = useMemo(() => {
         const q = value.trim().toLowerCase();
         const pool = q
@@ -100,7 +101,7 @@ export const DatabaseNameInput = forwardRef<HTMLInputElement, DatabaseNameInputP
                             className={cn("cursor-pointer rounded-md px-2 py-1.5", i === active && "bg-sunken")}>
                             <span className="block truncate text-sm font-medium">{m.name}</span>
                             <span className="block truncate text-xs text-muted-foreground">
-                                {[m.type, contactsSummary(m.contacts), m.min_check ? `min ${formatMoney(m.min_check)}` : ""].filter(Boolean).join(", ")}
+                                {[m.type, contactsSummary(m.contacts), m.min_check ? `min ${money.format(m.min_check)}` : ""].filter(Boolean).join(", ")}
                             </span>
                         </li>
                     ))}

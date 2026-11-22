@@ -49,7 +49,7 @@ export function NewRoundForm({rounds, copyFromDefault, onCreated}: NewRoundFormP
                        value={name} onChange={(e) => setName(e.target.value)}/>
             </div>
             <div className="flex flex-col gap-1.5">
-                <Label htmlFor="round-target">Target raise (USD, optional)</Label>
+                <Label htmlFor="round-target">Target raise ({org.currency}, optional)</Label>
                 <Input id="round-target" inputMode="decimal" placeholder="e.g. 8M" value={target} onChange={(e) => setTarget(e.target.value)}/>
                 {!targetValid && <p className="text-xs text-destructive">Use a number like 8M or 750K.</p>}
             </div>

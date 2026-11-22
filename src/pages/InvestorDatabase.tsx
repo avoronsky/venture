@@ -153,7 +153,7 @@ export default function InvestorDatabase() {
                                                         </>
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="tabular whitespace-nowrap text-right align-top">{r.min_check ? formatMoney(r.min_check) : ""}</TableCell>
+                                                <TableCell className="tabular whitespace-nowrap text-right align-top">{r.min_check ? formatMoney(r.min_check, "") : ""}</TableCell>
                                                 <TableCell className="align-top"><CommentCount stats={stats?.get(r.id)}/></TableCell>
                                             </TableRow>
                                         );

@@ -8,6 +8,8 @@ export type Role = "owner" | "editor" | "viewer";
 export interface Organization {
     id: string;
     name: string;
+    /** ISO 4217 code; all rounds in the organization use it. */
+    currency: string;
     created_at: string;
 }
 

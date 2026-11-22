@@ -1,7 +1,7 @@
 // Run with: npm test  (Node's built-in test runner; no extra dependencies)
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {checkRange, daysUntil, formatMoney, parseMoney, raiseMetrics} from "./pipeline.ts";
+import {checkRange, currencySymbol, daysUntil, formatMoney, parseMoney, raiseMetrics} from "./pipeline.ts";
 import {toCSV} from "./csv.ts";
 
 test("parseMoney understands K/M suffixes, symbols and commas", () => {
@@ -12,6 +12,9 @@ test("parseMoney understands K/M suffixes, symbols and commas", () => {
     assert.equal(parseMoney(""), 0);
     assert.equal(parseMoney("abc"), 0);
     assert.equal(parseMoney("-5"), 0);
+    assert.equal(parseMoney("£1.2m"), 1_200_000);
+    assert.equal(parseMoney("CHF 750K"), 750_000);
+    assert.equal(parseMoney("₴40M"), 40_000_000);
 });
 
 test("formatMoney is compact", () => {
@@ -20,6 +23,17 @@ test("formatMoney is compact", () => {
     assert.equal(formatMoney(1_500_000), "$1.5M");
     assert.equal(formatMoney(2_000_000), "$2M");
     assert.equal(formatMoney(12_500_000), "$12.5M");
+});
+
+test("formatMoney uses the organization's currency", () => {
+    assert.equal(formatMoney(1_500_000, "EUR"), "€1.5M");
+    assert.equal(formatMoney(250_000, "GBP"), "£250K");
+    assert.equal(formatMoney(40_000_000, "UAH"), "₴40M");
+    assert.equal(formatMoney(0, "EUR"), "€0");
+    assert.equal(formatMoney(2_000_000, "CHF"), "CHF\u00a02M");
+    assert.equal(formatMoney(2_000_000, ""), "2M");
+    assert.equal(currencySymbol("USD"), "$");
+    assert.equal(checkRange(500_000, 2_000_000, "EUR"), "€500K–€2M");
 });
 
 test("checkRange", () => {

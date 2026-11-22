@@ -47,20 +47,53 @@ export function num(v: unknown): number {
     return Number.isFinite(n) ? n : 0;
 }
 
-/** "$1.5M", "$250K", "$0". */
-export function formatMoney(value: unknown): string {
-    const n = num(value);
-    if (!n) return "$0";
-    const a = Math.abs(n);
-    if (a >= 1e6) return "$" + (n / 1e6).toFixed(a >= 1e7 ? 1 : 2).replace(/\.?0+$/, "") + "M";
-    if (a >= 1e3) return "$" + Math.round(n / 1e3) + "K";
-    return "$" + n;
+/** Currencies an organization can raise in (ISO 4217). The first is the default. */
+export const CURRENCIES = [
+    {code: "USD", name: "US dollar"},
+    {code: "EUR", name: "Euro"},
+    {code: "GBP", name: "British pound"},
+    {code: "CHF", name: "Swiss franc"},
+    {code: "UAH", name: "Ukrainian hryvnia"},
+    {code: "PLN", name: "Polish złoty"},
+    {code: "CZK", name: "Czech koruna"},
+    {code: "SEK", name: "Swedish krona"},
+    {code: "NOK", name: "Norwegian krone"},
+    {code: "DKK", name: "Danish krone"},
+    {code: "CAD", name: "Canadian dollar"},
+    {code: "AUD", name: "Australian dollar"},
+    {code: "ILS", name: "Israeli shekel"},
+    {code: "SGD", name: "Singapore dollar"},
+    {code: "JPY", name: "Japanese yen"},
+] as const;
+export const DEFAULT_CURRENCY = "USD";
+
+/** "$", "€", "₴"; codes without a short symbol come back as "CHF ". Empty currency = no symbol. */
+export function currencySymbol(currency: string = DEFAULT_CURRENCY): string {
+    if (!currency) return "";
+    let sym = currency;
+    try {
+        sym = new Intl.NumberFormat("en-US", {style: "currency", currency, currencyDisplay: "narrowSymbol"})
+            .formatToParts(0).find((p) => p.type === "currency")?.value ?? currency;
+    } catch { /* unknown code: show it as is */
+    }
+    return /^[A-Za-z]{2,}$/.test(sym) ? sym + "\u00a0" : sym;
 }
 
-/** Accepts "1.5M", "250k", "$2,000,000", "€300K". Returns 0 for blank or invalid. */
+/** "$1.5M", "€250K", "$0". Pass "" for a bare number ("1.5M"). */
+export function formatMoney(value: unknown, currency: string = DEFAULT_CURRENCY): string {
+    const sym = currencySymbol(currency);
+    const n = num(value);
+    if (!n) return sym + "0";
+    const a = Math.abs(n);
+    if (a >= 1e6) return sym + (n / 1e6).toFixed(a >= 1e7 ? 1 : 2).replace(/\.?0+$/, "") + "M";
+    if (a >= 1e3) return sym + Math.round(n / 1e3) + "K";
+    return sym + n;
+}
+
+/** Accepts "1.5M", "250k", "$2,000,000", "€300K", "CHF 1M". Returns 0 for blank or invalid. */
 export function parseMoney(value: unknown): number {
     if (value == null || value === "") return 0;
-    let s = String(value).trim().toLowerCase().replace(/[$,\s€]/g, "");
+    let s = String(value).trim().toLowerCase().replace(/[^0-9.km-]/g, "");
     let m = 1;
     if (s.endsWith("m")) {
         m = 1e6;
@@ -69,15 +102,15 @@ export function parseMoney(value: unknown): number {
         m = 1e3;
         s = s.slice(0, -1);
     }
-    const n = parseFloat(s);
-    return Number.isFinite(n) && n > 0 ? Math.round(n * m) : 0;
+    const n = Number(s);
+    return s !== "" && Number.isFinite(n) && n > 0 ? Math.round(n * m) : 0;
 }
 
-export function checkRange(min: unknown, max: unknown): string {
+export function checkRange(min: unknown, max: unknown, currency: string = DEFAULT_CURRENCY): string {
     const a = num(min), b = num(max);
-    if (a && b) return `${formatMoney(a)}–${formatMoney(b)}`;
-    if (a) return `${formatMoney(a)}+`;
-    if (b) return `≤${formatMoney(b)}`;
+    if (a && b) return `${formatMoney(a, currency)}–${formatMoney(b, currency)}`;
+    if (a) return `${formatMoney(a, currency)}+`;
+    if (b) return `≤${formatMoney(b, currency)}`;
     return "";
 }
 
