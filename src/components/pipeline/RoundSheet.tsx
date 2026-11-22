@@ -23,6 +23,7 @@ import {useDeleteRound, useSaveRound} from "@/hooks/useRounds";
 import {useOrg} from "@/hooks/useOrg";
 import {parseMoney, STAGES} from "@/lib/pipeline";
 import type {Round} from "@/lib/types";
+import {useMoney} from "@/hooks/useMoney";
 
 const money = z.string().trim().refine((v) => v === "" || parseMoney(v) > 0, "Use a number like 5M");
 const schema = z.object({
@@ -53,6 +54,7 @@ interface RoundSheetProps {
 
 export function RoundSheet({open, round, investorCount, onClose}: RoundSheetProps) {
     const {org, canEdit, isOwner} = useOrg();
+    const money = useMoney();
     const save = useSaveRound(org.id);
     const del = useDeleteRound(org.id);
     const navigate = useNavigate();
@@ -99,7 +101,7 @@ export function RoundSheet({open, round, investorCount, onClose}: RoundSheetProp
                             )}/>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="r-target" className="text-xs text-muted-foreground">Target raise (USD)</Label>
+                            <Label htmlFor="r-target" className="text-xs text-muted-foreground">{money.label("Target raise")}</Label>
                             <Input id="r-target" inputMode="decimal" placeholder="5M" {...register("target")}/>
                             {errors.target && <p className="text-xs text-destructive">{errors.target.message}</p>}
                         </div>
@@ -108,7 +110,7 @@ export function RoundSheet({open, round, investorCount, onClose}: RoundSheetProp
                             <Input id="r-instrument" {...register("instrument")} placeholder="Priced equity, SAFE…"/>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="r-cap" className="text-xs text-muted-foreground">Valuation / cap (USD)</Label>
+                            <Label htmlFor="r-cap" className="text-xs text-muted-foreground">{money.label("Valuation / cap")}</Label>
                             <Input id="r-cap" inputMode="decimal" {...register("cap")}/>
                             {errors.cap && <p className="text-xs text-destructive">{errors.cap.message}</p>}
                         </div>

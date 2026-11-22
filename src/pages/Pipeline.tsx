@@ -18,9 +18,10 @@ import {Board} from "@/components/pipeline/Board";
 import {InvestorTable} from "@/components/pipeline/InvestorTable";
 import {InvestorSheet} from "@/components/pipeline/InvestorSheet";
 import {RoundSheet} from "@/components/pipeline/RoundSheet";
-import {formatMoney, INVESTOR_TYPES, raiseMetrics} from "@/lib/pipeline";
+import {INVESTOR_TYPES, raiseMetrics} from "@/lib/pipeline";
 import {downloadInvestorsCSV} from "@/lib/importExport";
 import {cn} from "@/lib/utils";
+import {useMoney} from "@/hooks/useMoney";
 
 type View = "board" | "table";
 
@@ -34,6 +35,7 @@ function readView(): View {
 
 export default function Pipeline() {
     const {org, canEdit} = useOrg();
+    const money = useMoney();
     const {investorId} = useParams();
     const navigate = useNavigate();
     const round = useCurrentRound();
@@ -79,7 +81,7 @@ export default function Pipeline() {
     const roundFacts = [
         round.status === "closed" ? "Closed" : "",
         round.instrument,
-        round.cap ? `${formatMoney(round.cap)} cap` : "",
+        round.cap ? `${money.format(round.cap)} cap` : "",
         round.close_date ? `closing ${format(new Date(round.close_date + "T00:00:00"), "MMM d, yyyy")}` : "",
     ].filter(Boolean);
 

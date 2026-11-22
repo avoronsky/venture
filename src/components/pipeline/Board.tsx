@@ -1,9 +1,10 @@
 import {contactsSummary} from "@/lib/contacts";
 import {type DragEvent, useState} from "react";
 import {cn} from "@/lib/utils";
-import {checkRange, formatMoney, STAGES, type StageId} from "@/lib/pipeline";
+import {STAGES, type StageId} from "@/lib/pipeline";
 import type {CommentStats, Investor} from "@/lib/types";
 import {CommentCount, MandateTag, NextChip, PriorityChip} from "./badges";
+import {useMoney} from "@/hooks/useMoney";
 
 interface BoardProps {
     investors: Investor[];
@@ -18,6 +19,7 @@ const priorityRank = {A: 0, B: 1, C: 2};
 const isWon = (s: StageId) => s === "committed" || s === "closed";
 
 export function Board({investors, showPassed, canEdit, onOpen, onMove, commentStats}: BoardProps) {
+    const money = useMoney();
     const [over, setOver] = useState<StageId | null>(null);
     const [dragging, setDragging] = useState<string | null>(null);
     const stages = STAGES.filter((s) => s.id !== "passed" || showPassed);
@@ -60,7 +62,7 @@ export function Board({investors, showPassed, canEdit, onOpen, onMove, commentSt
                                     {s.name}
                                     <span className="tabular font-normal text-muted-foreground">{items.length}</span>
                                 </h2>
-                                {total > 0 && <span className="tabular text-xs text-muted-foreground">{formatMoney(total)}</span>}
+                                {total > 0 && <span className="tabular text-xs text-muted-foreground">{money.format(total)}</span>}
                             </div>
 
                             {items.length === 0 ? (
@@ -69,7 +71,7 @@ export function Board({investors, showPassed, canEdit, onOpen, onMove, commentSt
                                     {canEdit ? "Drag an investor here" : "No investors"}
                                 </div>
                             ) : items.map((inv) => {
-                                const amount = inv.amount ? formatMoney(inv.amount) : checkRange(inv.check_min, inv.check_max);
+                                const amount = inv.amount ? money.format(inv.amount) : money.range(inv.check_min, inv.check_max);
                                 return (
                                     <button key={inv.id} type="button" draggable={canEdit}
                                             onDragStart={(e) => {

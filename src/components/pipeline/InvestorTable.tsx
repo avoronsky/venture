@@ -4,9 +4,10 @@ import {format} from "date-fns";
 import {ArrowDown, ArrowUp} from "lucide-react";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {cn} from "@/lib/utils";
-import {checkRange, formatMoney, STAGES} from "@/lib/pipeline";
+import {STAGES} from "@/lib/pipeline";
 import type {CommentStats, Investor} from "@/lib/types";
 import {CommentCount, MandateTag, NextChip, PriorityChip, StagePill} from "./badges";
+import {useMoney} from "@/hooks/useMoney";
 
 type SortKey = "name" | "stage" | "priority" | "type" | "amount" | "check" | "mandate" | "via" | "next_date" | "last_contact" | "comments";
 
@@ -33,6 +34,7 @@ function sortValue(r: Investor, k: SortKey, stats?: Map<string, CommentStats>): 
 }
 
 export function InvestorTable({investors, onOpen, commentStats}: {investors: Investor[]; onOpen: (id: string) => void; commentStats?: Map<string, CommentStats>}) {
+    const money = useMoney();
     const [sort, setSort] = useState<{key: SortKey; dir: 1 | -1}>({key: "stage", dir: 1});
     const rows = useMemo(() => [...investors].sort((a, b) => {
         const x = sortValue(a, sort.key, commentStats), y = sortValue(b, sort.key, commentStats);
@@ -68,8 +70,8 @@ export function InvestorTable({investors, onOpen, commentStats}: {investors: Inv
                             <TableCell className="align-top"><StagePill stage={r.stage}/></TableCell>
                             <TableCell className="align-top"><PriorityChip priority={r.priority}/></TableCell>
                             <TableCell className="align-top">{r.type}</TableCell>
-                            <TableCell className="tabular align-top text-right whitespace-nowrap">{r.amount ? formatMoney(r.amount) : ""}</TableCell>
-                            <TableCell className="tabular align-top text-right whitespace-nowrap">{checkRange(r.check_min, r.check_max)}</TableCell>
+                            <TableCell className="tabular align-top text-right whitespace-nowrap">{r.amount ? money.format(r.amount) : ""}</TableCell>
+                            <TableCell className="tabular align-top text-right whitespace-nowrap">{money.range(r.check_min, r.check_max)}</TableCell>
                             <TableCell className="align-top"><MandateTag mandate={r.mandate}/></TableCell>
                             <TableCell className="align-top">{r.via}</TableCell>
                             <TableCell className="align-top">

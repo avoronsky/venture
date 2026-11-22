@@ -34,6 +34,7 @@ import {contactsSchema, fromContactDrafts, toContactDrafts} from "@/components/c
 import {cn} from "@/lib/utils";
 import {useOrg} from "@/hooks/useOrg";
 import {useCurrentRound} from "@/hooks/useCurrentRound";
+import {useMoney} from "@/hooks/useMoney";
 
 const money = z.string().trim().refine((v) => v === "" || parseMoney(v) > 0, "Use a number like 250K or 1.5M");
 
@@ -105,6 +106,7 @@ interface InvestorSheetProps {
 export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetProps) {
     const isNew = !investor;
     const {org} = useOrg();
+    const money = useMoney();
     const round = useCurrentRound();
     const save = useSaveInvestor(org.id, round.id);
     const del = useDeleteInvestor(org.id);
@@ -235,9 +237,9 @@ export function InvestorSheet({open, investor, canEdit, onClose}: InvestorSheetP
                                     </Select>
                                 )}/>
                             </Field>
-                            <Field label="Check min (USD)" error={errors.check_min?.message}><Input inputMode="decimal" placeholder="250K" {...register("check_min")}/></Field>
-                            <Field label="Check max (USD)" error={errors.check_max?.message}><Input inputMode="decimal" placeholder="2M" {...register("check_max")}/></Field>
-                            <Field label="Expected / committed" hint="Counts toward the raise meter" error={errors.amount?.message}>
+                            <Field label={money.label("Check min")} error={errors.check_min?.message}><Input inputMode="decimal" placeholder="250K" {...register("check_min")}/></Field>
+                            <Field label={money.label("Check max")} error={errors.check_max?.message}><Input inputMode="decimal" placeholder="2M" {...register("check_max")}/></Field>
+                            <Field label={money.label("Expected / committed")} hint="Counts toward the raise meter" error={errors.amount?.message}>
                                 <Input inputMode="decimal" placeholder="1.5M" {...register("amount")}/>
                             </Field>
                             <Controller control={control} name="can_lead" render={({field}) => (

@@ -38,7 +38,7 @@ export function useMyOrganizations() {
         queryFn: async (): Promise<Membership[]> => {
             const {data, error} = await supabase
                 .from("organization_members")
-                .select("role, org:organizations(id, name, created_at)")
+                .select("role, org:organizations(id, name, currency, created_at)")
                 .eq("email", email!);
             if (error) throw error;
             return ((data ?? []) as unknown as {role: Role; org: Organization | null}[])
@@ -73,6 +73,21 @@ export function useRenameOrganization(orgId: string) {
         },
         onSuccess: () => {
             toast.success("Organization renamed");
+            qc.invalidateQueries({queryKey: ["memberships"]});
+        },
+        onError: (e) => toast.error(errorMessage(e)),
+    });
+}
+
+export function useSetOrganizationCurrency(orgId: string) {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (currency: string) => {
+            const {error} = await supabase.from("organizations").update({currency}).eq("id", orgId);
+            if (error) throw error;
+        },
+        onSuccess: (_, currency) => {
+            toast.success(`Currency set to ${currency}`);
             qc.invalidateQueries({queryKey: ["memberships"]});
         },
         onError: (e) => toast.error(errorMessage(e)),

@@ -3,7 +3,7 @@ import {useNavigate} from "react-router-dom";
 import {Loader2, LogOut, Trash2, UserPlus} from "lucide-react";
 import {useAuth} from "@/hooks/useAuth";
 import {useOrg} from "@/hooks/useOrg";
-import {useDeleteOrganization, useMemberMutations, useMembers, useRenameOrganization} from "@/hooks/useOrganizations";
+import {useDeleteOrganization, useMemberMutations, useMembers, useRenameOrganization, useSetOrganizationCurrency} from "@/hooks/useOrganizations";
 import {AppShell} from "@/components/AppShell";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -22,6 +22,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type {Role} from "@/lib/types";
+import {CURRENCIES} from "@/lib/pipeline";
 
 const ROLES: {value: Role; label: string; hint: string}[] = [
     {value: "owner", label: "Owner", hint: "Everything, plus access, renaming and deleting the organization"},
@@ -36,6 +37,7 @@ export default function OrgSettings() {
     const {data: members = [], isLoading} = useMembers(org.id);
     const {add, setRole, remove} = useMemberMutations(org.id);
     const rename = useRenameOrganization(org.id);
+    const setCurrency = useSetOrganizationCurrency(org.id);
     const del = useDeleteOrganization();
 
     const [name, setName] = useState(org.name);
@@ -75,6 +77,25 @@ export default function OrgSettings() {
                             </Button>
                         )}
                     </form>
+                    <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="org-currency" className="text-xs text-muted-foreground">Main currency</Label>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Select value={org.currency} disabled={!isOwner || setCurrency.isPending}
+                                    onValueChange={(v) => v !== org.currency && setCurrency.mutate(v)}>
+                                <SelectTrigger id="org-currency" className="w-64"><SelectValue/></SelectTrigger>
+                                <SelectContent>
+                                    {CURRENCIES.some((c) => c.code === org.currency) ? null
+                                        : <SelectItem value={org.currency}>{org.currency}</SelectItem>}
+                                    {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.code} · {c.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            {setCurrency.isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            Every round uses it for targets, caps, check sizes and amounts.
+                            Changing it relabels existing figures; it doesn't convert them.
+                        </p>
+                    </div>
                 </CardContent>
             </Card>
 

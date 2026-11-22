@@ -1,6 +1,7 @@
-import {formatMoney, type RaiseMetrics, STAGES} from "@/lib/pipeline";
+import {type RaiseMetrics, STAGES} from "@/lib/pipeline";
 import type {Investor} from "@/lib/types";
 import {cn} from "@/lib/utils";
+import {useMoney} from "@/hooks/useMoney";
 
 interface RaiseMeterProps {
     metrics: RaiseMetrics;
@@ -13,6 +14,7 @@ interface RaiseMeterProps {
  * stage-weighted rest of the pipeline (hatched), measured against the round target.
  */
 export function RaiseMeter({metrics: m, investors, onSetTarget}: RaiseMeterProps) {
+    const {format: formatMoney} = useMoney();
     const total = m.committed + m.termSheets + m.earlyWeighted;
     const scale = Math.max(m.target, total, 1);
     const pct = (v: number) => `${Math.min(100, (v / scale) * 100)}%`;
@@ -74,6 +76,7 @@ export function RaiseMeter({metrics: m, investors, onSetTarget}: RaiseMeterProps
 }
 
 function Stat({label, value}: {label: string; value: number}) {
+    const {format: formatMoney} = useMoney();
     return (
         <div>
             <dt className="text-xs text-muted-foreground">{label}</dt>
