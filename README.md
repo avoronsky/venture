@@ -85,6 +85,19 @@ All of these rules are enforced in the database with row level security, not onl
 
 ![People and settings](docs/screenshots/settings.png)
 
+### Investor updates
+
+**Investor updates** in the sidebar is for the regular email you send the people backing you. Write it here, send it from your own Gmail, and keep a record of every update and who got it.
+
+- **Recipient lists.** **Recipient lists** holds named lists, such as *Current investors* or *Warm prospects*. Add people from your pipelines (by default, contacts at investors that committed or closed; any stage and round can be picked) or paste addresses. A pasted line can be `ann@fund.vc`, `Ann Lee <ann@fund.vc>`, or a spreadsheet row with name, firm and email.
+- **Composer.** Write the update the way it looks, paste it from Google Docs or Word, or edit the HTML directly. A live preview shows the email as one chosen person on the list will get it, at desktop or phone width. New updates start from a template with the usual sections: TL;DR, key numbers, highlights, challenges, and how investors can help. Drafts save as you type.
+- **Personal emails.** Each person gets their own email. Nobody sees the other recipients. `{{first_name}}`, `{{name}}`, `{{firm}}` and `{{email}}` are filled in for each person. Text after a `|` is used when a value is empty, for example `Hi {{first_name|there}},`. The composer warns about misspelled fields and fields that are empty for someone on the list.
+- **Sent from your Gmail.** **Send me a test** sends the update to your own inbox first. **Send** asks Google for permission to send email as you; this is a popup, the first time in each session. The emails then go out through the Gmail API. They appear in your Gmail **Sent** folder, and replies come back to you.
+- **History.** Every sent update keeps its subject and content, the list it went to, the address it was sent from, and who received it. You can open any recipient to see exactly what they got. If an email fails, or the tab closes partway through, **Retry** sends only to the people who haven't received it. **Start the next update from this one** copies the update into a new draft.
+- **Who can do what.** Editors and owners manage lists, write and send updates. Viewers can read the lists and the history. Only owners can delete a sent update from the history. Once an update starts sending, the database doesn't let anyone change it.
+
+The app never stores a Google token. Google gives the open tab a key that lasts about an hour and can only send email. It is kept in memory, and disconnecting revokes it.
+
 ### Works on a phone, and in dark mode
 
 <p>
@@ -128,12 +141,27 @@ You need a Supabase project, a Google Cloud OAuth client and somewhere to host s
 
 Any Google account can sign in, but a new user sees nothing until they create an organization or someone adds their email to one.
 
-### 3. Publish the app on GitHub Pages
+### 3. Set up Gmail sending (for investor updates)
+
+Skip this if you won't use investor updates. Everything else works without it.
+
+1. **Enable the Gmail API.** In the same Google Cloud project, go to **APIs & Services → Library**, find **Gmail API** and enable it.
+2. **Add the scope.** On the OAuth consent screen, under **Data access**, add `https://www.googleapis.com/auth/gmail.send`.
+   - **Google Workspace:** set the app's audience to **Internal**. Everyone in your Workspace can then send, with no Google review and no "unverified app" warning.
+   - **A personal Gmail account:** leave the app in **Testing** and add each sender as a test user. Google shows an "unverified app" warning that they can click through.
+3. **Allow the app's origin.** In the OAuth client, add the app's origin under **Authorized JavaScript origins**, for example `https://avoronsky.github.io`. Add `http://localhost:8087` too for local development. Use the origin only, without a path.
+4. **Give the app the client ID.** Set `VITE_GOOGLE_CLIENT_ID` to the client ID (`….apps.googleusercontent.com`): as a GitHub Actions variable for Pages (next step), or in `.env` locally. The client ID is public; the client secret stays in Supabase only.
+5. **Run the migration.** Run `supabase/migrations/20261126100000_investor_updates.sql` once, as described in [Changing the database later](#changing-the-database-later).
+
+Gmail allows about 2,000 recipients a day from a Workspace account and 500 from a personal one.
+
+### 4. Publish the app on GitHub Pages
 
 1. **Turn on Pages.** In the GitHub repo, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
 2. **Add the variables.** Under **Settings → Secrets and variables → Actions → Variables**, add these. They're *variables*, not secrets; both values are public.
    - `VITE_SUPABASE_URL`: from Supabase **Settings → API**.
    - `VITE_SUPABASE_ANON_KEY`: the publishable (anon) key from the same page.
+   - `VITE_GOOGLE_CLIENT_ID`: optional. It turns on Gmail sending for investor updates (step 3).
    - `VITE_BASE_PATH`: only if the app is served from a path other than `/venture/`. For example, use `/` for a custom domain or a repo named `<user>.github.io`.
 3. **Deploy.** Push to `main`, or run **Actions → Build & Deploy → Run workflow**. The app appears at `https://<user>.github.io/<repo>/`.
 
@@ -211,11 +239,15 @@ src/
   components/database/           MyInvestorSheet
   components/comments/           CommentTimeline, shared by pipelines and the database
   components/contacts/           ContactsEditor and InvestorLinks, shared by pipelines and the database
+  components/updates/            Composer, SentUpdate, EmailFrame (preview and visual editor), PipelinePicker
   components/ui/                 shadcn/ui primitives
   hooks/                         useAuth, useOrganizations, useOrg, useRounds, useCurrentRound,
-                                 usePipeline (queries, mutations, realtime), useMyInvestors
-  lib/                           pure helpers with unit tests: stages and money, comments, contacts, rounds, websites, CSV
-  pages/                         Auth, Home, Organizations, Pipeline, InvestorDatabase, OrgSettings
+                                 usePipeline (queries, mutations, realtime), useMyInvestors,
+                                 useUpdates (lists, updates, sending), useGmail, useSendRunner
+  lib/                           pure helpers with unit tests: stages and money, comments, contacts, rounds, websites, CSV,
+                                 email placeholders, pasted recipients, MIME messages; gmail.ts talks to Google
+  pages/                         Auth, Home, Organizations, Pipeline, InvestorDatabase, OrgSettings,
+                                 Updates, UpdatePage, RecipientLists
 supabase/migrations/             the database schema (tables, triggers, access rules, realtime), then any later changes
 docs/screenshots/                images used in this README
 .github/workflows/               CI, GitHub Pages deploy, optional migrations
@@ -229,6 +261,9 @@ docs/screenshots/                images used in this README
 | `/o/:orgId` | The last-used round of that organization |
 | `/o/:orgId/r/:roundId` | The pipeline for one round |
 | `/o/:orgId/r/:roundId/investors/:id` | The pipeline with an investor open. This is a link you can share. `new` opens the add form |
+| `/o/:orgId/updates` | Investor updates: drafts and everything sent |
+| `/o/:orgId/updates/:id` | A draft in the composer, or a sent update with who received it |
+| `/o/:orgId/lists`, `/o/:orgId/lists/:id` | Recipient lists for investor updates. `new` opens the create form |
 | `/o/:orgId/settings` | Organization name, main currency (used by every round), people with access, leave or delete |
 | `/investors`, `/investors/:id` | Your private investor database |
 

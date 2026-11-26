@@ -118,3 +118,64 @@ export interface MyInvestorComment {
     created_at: string;
     edited_at: string | null;
 }
+
+/** A named list of people an organization sends investor updates to. */
+export interface RecipientList {
+    id: string;
+    org_id: string;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface RecipientListMember {
+    id: string;
+    list_id: string;
+    org_id: string;
+    email: string;
+    name: string;
+    firm: string;
+    /** The pipeline investor this person was picked from, if any. */
+    investor_id: string | null;
+    created_at: string;
+}
+
+export type RecipientInput = Pick<RecipientListMember, "email" | "name" | "firm"> & {investor_id?: string | null};
+
+/** draft → sending → sent, partial (some failed) or failed (none went out). */
+export type UpdateStatus = "draft" | "sending" | "sent" | "partial" | "failed";
+
+/** One investor update email. Only drafts can change. */
+export interface InvestorUpdate {
+    id: string;
+    org_id: string;
+    subject: string;
+    body_html: string;
+    status: UpdateStatus;
+    list_id: string | null;
+    /** The list's name when it was sent, kept if the list is renamed or deleted. */
+    list_name: string | null;
+    /** The Gmail account it was sent from. */
+    sender_email: string | null;
+    author_email: string | null;
+    created_at: string;
+    updated_at: string;
+    sent_at: string | null;
+}
+
+/** The outcome for one recipient of a sent update. */
+export interface UpdateDelivery {
+    id: number;
+    update_id: string;
+    org_id: string;
+    email: string;
+    name: string;
+    firm: string;
+    status: "pending" | "sent" | "failed";
+    error: string | null;
+    gmail_message_id: string | null;
+    attempts: number;
+    sent_at: string | null;
+    updated_at: string;
+}

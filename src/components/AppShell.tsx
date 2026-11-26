@@ -1,7 +1,7 @@
 import {type ReactNode, useState} from "react";
 import {Link, NavLink, useLocation} from "react-router-dom";
 import {useTheme} from "next-themes";
-import {BookUser, Check, ChevronsUpDown, Columns3, LogOut, Menu, Monitor, Moon, Plus, Sun, Users} from "lucide-react";
+import {BookUser, Check, ChevronsUpDown, Columns3, ListChecks, LogOut, Mail, Menu, Monitor, Moon, Plus, Sun, Users} from "lucide-react";
 import {useRounds} from "@/hooks/useRounds";
 import {useOptionalRound} from "@/hooks/useCurrentRound";
 import {NewRoundForm} from "@/components/pipeline/NewRoundForm";
@@ -190,9 +190,17 @@ function SidebarContents({onNavigate, onNewRound}: {onNavigate?: () => void; onN
                             )}
                         </div>
                     </div>
-                    <NavLink to={`/o/${current.org.id}/settings`} className={navItem} onClick={onNavigate}>
-                        <Users className="h-4 w-4"/>People & settings
-                    </NavLink>
+                    <div className="flex flex-col gap-0.5">
+                        <NavLink to={`/o/${current.org.id}/updates`} className={navItem} onClick={onNavigate}>
+                            <Mail className="h-4 w-4"/>Investor updates
+                        </NavLink>
+                        <NavLink to={`/o/${current.org.id}/lists`} className={navItem} onClick={onNavigate}>
+                            <ListChecks className="h-4 w-4"/>Recipient lists
+                        </NavLink>
+                        <NavLink to={`/o/${current.org.id}/settings`} className={navItem} onClick={onNavigate}>
+                            <Users className="h-4 w-4"/>People & settings
+                        </NavLink>
+                    </div>
                 </nav>
             ) : (
                 <nav className="flex flex-col gap-0.5" aria-label="Organizations">
