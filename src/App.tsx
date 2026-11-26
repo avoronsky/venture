@@ -17,6 +17,9 @@ const Home = lazy(() => import("@/pages/Home"));
 const Organizations = lazy(() => import("@/pages/Organizations"));
 const Pipeline = lazy(() => import("@/pages/Pipeline"));
 const OrgSettings = lazy(() => import("@/pages/OrgSettings"));
+const Updates = lazy(() => import("@/pages/Updates"));
+const UpdatePage = lazy(() => import("@/pages/UpdatePage"));
+const RecipientLists = lazy(() => import("@/pages/RecipientLists"));
 const InvestorDatabase = lazy(() => import("@/pages/InvestorDatabase"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -50,6 +53,11 @@ function App() {
                                             <Route path="investors/:investorId" element={<Pipeline/>}/>
                                         </Route>
                                         <Route path="investors/:investorId" element={<LegacyInvestorRedirect/>}/>
+                                        {/* Investor updates: drafts, sent history, and recipient lists */}
+                                        <Route path="updates" element={<Updates/>}/>
+                                        <Route path="updates/:updateId" element={<UpdatePage/>}/>
+                                        <Route path="lists" element={<RecipientLists/>}/>
+                                        <Route path="lists/:listId" element={<RecipientLists/>}/>
                                         <Route path="settings" element={<OrgSettings/>}/>
                                     </Route>
                                     <Route path="/o" element={<Navigate to="/orgs" replace/>}/>

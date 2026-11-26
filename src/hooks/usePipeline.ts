@@ -77,6 +77,11 @@ export function usePipelineRealtime(orgId: string | undefined) {
                 if (id) qc.invalidateQueries({queryKey: keys.activity(orgId, id)});
                 qc.invalidateQueries({queryKey: keys.commentStats(orgId)});
             })
+            // Investor updates: a teammate's draft or send shows up without reloading.
+            .on("postgres_changes", {event: "*", schema: "public", table: "investor_updates", filter}, () =>
+                qc.invalidateQueries({queryKey: [orgId, "updates"]}))
+            .on("postgres_changes", {event: "*", schema: "public", table: "update_deliveries", filter}, () =>
+                qc.invalidateQueries({queryKey: [orgId, "deliveries"]}))
             .on("postgres_changes", {event: "*", schema: "public", table: "organization_members", filter}, () => {
                 qc.invalidateQueries({queryKey: ["members", orgId]});
                 qc.invalidateQueries({queryKey: ["memberships"]});

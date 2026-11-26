@@ -36,6 +36,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
           VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH || '/venture/' }}
       - uses: actions/configure-pages@v5
         if: github.event_name != 'pull_request'
